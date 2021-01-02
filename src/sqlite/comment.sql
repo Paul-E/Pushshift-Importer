@@ -1,5 +1,6 @@
 -- We need to turn on recursive triggers so that the triggers fire for "ON CONFLICT" clauses.
 PRAGMA recursive_triggers = ON;
+PRAGMA max_page_count = 4294967292;
 
 -- https://kimsereylam.com/sqlite/2020/03/06/full-text-search-with-sqlite.html
 CREATE TABLE IF NOT EXISTS comment (id INTEGER PRIMARY KEY,
