@@ -1,4 +1,8 @@
-use anyhow::Context;
+use crate::{
+    storage::{Storable, Storage},
+    Filterable, FromJsonString,
+};
+use anyhow::{Context, Result};
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug, Clone)]
@@ -31,8 +35,8 @@ pub struct Comment {
     controversiality: Option<i32>,
 }
 
-impl Comment {
-    pub fn from_json_str(line: &str) -> Self {
+impl FromJsonString for Comment {
+    fn from_json_str(line: &str) -> Self {
         let mut json: serde_json::Value = serde_json::from_str(line)
             .with_context(|| format!("Failed to read json for line: {}", line))
             .unwrap();
@@ -56,5 +60,26 @@ impl Comment {
         }
         comment.parent_id = comment.parent_id.split_off(2);
         comment
+    }
+}
+
+impl Filterable for Comment {
+    fn score(&self) -> i32 {
+        self.score
+    }
+    fn author(&self) -> Option<&str> {
+        Some(self.author.as_str())
+    }
+    fn subreddit(&self) -> &str {
+        self.subreddit.as_str()
+    }
+    fn created(&self) -> i64 {
+        self.created_utc
+    }
+}
+
+impl Storable for Comment {
+    fn store<T: Storage>(&self, storage: &T) -> Result<usize> {
+        storage.insert_comment(&self)
     }
 }

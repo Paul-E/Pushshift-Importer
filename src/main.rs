@@ -7,6 +7,8 @@ extern crate serde_json;
 mod comment;
 mod decompress;
 mod sqlite;
+mod storage;
+mod submission;
 
 use std::{
     fs,
@@ -20,29 +22,41 @@ use std::{
 };
 
 use crate::hashbrown::HashSet;
-use crate::sqlite::Sqlite;
+use crate::{
+    comment::Comment,
+    sqlite::Sqlite,
+    storage::{Storable, Storage},
+    submission::Submission,
+};
 use bzip2::read::BzDecoder;
 use clap::{App, Arg};
 use xz2::read::XzDecoder;
 
-use comment::Comment;
-
 fn main() {
+    // let test = include_str!("example.json");
+    // Submission::from_json_str(test);
+    // println!("Test string passed");
     let matches = App::new("pushshift-importer")
         .version("0.1")
         .author("Paul Ellenbogen")
-        .arg(
-            Arg::with_name("input-dir")
-                .required(true)
-                .help("Directory where compressed json files containing comments are located")
-                .takes_value(true),
-        )
         .arg(
             Arg::with_name("sqlite-outfile")
                 .required(true)
                 .help("Path for for output Sqlite database.")
                 .takes_value(true),
         )
+        .arg(Arg::with_name("comments")
+            .long("comments")
+            .help("Directory where compressed json files containing comments are located")
+            .takes_value(true))
+        .arg(Arg::with_name("submissions")
+            .long("submissions")
+            .help("Directory where compressed json files containing submissions are located")
+            .takes_value(true))
+        .arg(Arg::with_name("filter-config")
+            .long("filter-config")
+            .help("File containing filter configuration")
+            .takes_value(true))
         .arg(
             Arg::with_name("username")
                 .long("username")
@@ -72,22 +86,30 @@ fn main() {
         .unwrap_or_else(HashSet::new);
     let sqlite_filename = Path::new(matches.value_of("sqlite-outfile").unwrap());
     let sqlite = Sqlite::new(sqlite_filename).expect("Error setting up sqlite DB");
-    let filter: CommentFilter = CommentFilter { users, subreddits };
-    let input_dir = Path::new(matches.value_of("input-dir").unwrap());
-    let file_list = get_file_list(input_dir);
-    process(file_list, filter, sqlite);
+    let filter: Arc<Filter> = Arc::new(Filter { users, subreddits });
+    if let Some(comments_dir) = matches.value_of("comments") {
+        let file_list = get_file_list(Path::new(comments_dir));
+        process::<_, Comment>(file_list, filter.clone(), &sqlite);
+    }
+    if let Some(submissions_dir) = matches.value_of("submissions") {
+        let file_list = get_file_list(Path::new(submissions_dir));
+        process::<_, Submission>(file_list, filter, &sqlite);
+    }
 }
 
-fn process(file_list: Vec<PathBuf>, filter: CommentFilter, db: Sqlite) {
+fn process<T, U>(file_list: Vec<PathBuf>, filter: Arc<Filter>, db: &T)
+where
+    T: Storage,
+    U: Storable + FromJsonString + Filterable + Send + 'static,
+{
     let shared_file_list = Arc::new(RwLock::new(file_list));
-    let shared_filter = Arc::new(filter);
     let completed = Arc::new(AtomicUsize::new(0));
     let mut threads = Vec::new();
     let (tx, rx) = mpsc::channel();
     let num_cpus = num_cpus::get_physical();
     for _i in 0..(num_cpus - 1) {
-        let filter_context = FilterContext::new(
-            shared_filter.clone(),
+        let filter_context = ThreadContext::new(
+            filter.clone(),
             shared_file_list.clone(),
             completed.clone(),
             tx.clone(),
@@ -99,14 +121,13 @@ fn process(file_list: Vec<PathBuf>, filter: CommentFilter, db: Sqlite) {
     }
 
     loop {
-        let maybe_comment = rx.try_recv();
-        match maybe_comment {
-            Ok(comment) => {
-                db.insert_comment(&comment)
-                    .expect("Error inserting comment");
+        let maybe_content: Result<U, _> = rx.try_recv();
+        match maybe_content {
+            Ok(content) => {
+                content.store(db).expect("Error inserting content");
             }
             Err(mpsc::TryRecvError::Disconnected) => {
-                maybe_comment.unwrap();
+                maybe_content.unwrap();
             }
             Err(mpsc::TryRecvError::Empty) => {
                 if completed.load(Ordering::Relaxed) < (num_cpus - 1) {
@@ -131,21 +152,21 @@ fn get_file_list(dir: &Path) -> Vec<PathBuf> {
         .collect()
 }
 
-struct FilterContext {
-    filter: Arc<CommentFilter>,
+struct ThreadContext<T> {
+    filter: Arc<Filter>,
     queue: Arc<RwLock<Vec<PathBuf>>>,
     completed: Arc<AtomicUsize>,
-    send_channel: mpsc::Sender<comment::Comment>,
+    send_channel: mpsc::Sender<T>,
 }
 
-impl FilterContext {
+impl<T: FromJsonString + Filterable> ThreadContext<T> {
     fn new(
-        filter: Arc<CommentFilter>,
+        filter: Arc<Filter>,
         queue: Arc<RwLock<Vec<PathBuf>>>,
         completed: Arc<AtomicUsize>,
-        send_channel: mpsc::Sender<comment::Comment>,
+        send_channel: mpsc::Sender<T>,
     ) -> Self {
-        FilterContext {
+        ThreadContext {
             filter,
             queue,
             completed,
@@ -160,10 +181,11 @@ impl FilterContext {
 
     fn process_queue(&self) {
         while let Some(filename) = self.get_next_file() {
-            for comment in
-                iter_comments(filename.as_path()).filter(|comment| self.filter.filter(comment))
+            for content in iter_lines(filename.as_path())
+                .map(|line| T::from_json_str(line.as_str()))
+                .filter(|content| self.filter.filter(content))
             {
-                self.send_channel.send(comment).unwrap();
+                self.send_channel.send(content).unwrap();
             }
         }
         self.completed.fetch_add(1, Ordering::Relaxed);
@@ -171,52 +193,63 @@ impl FilterContext {
 }
 
 #[derive(Debug, Clone, Default)]
-struct CommentFilter {
+struct Filter {
     users: HashSet<String>,
     subreddits: HashSet<String>,
 }
 
-impl CommentFilter {
-    fn filter(&self, comment: &comment::Comment) -> bool {
+impl Filter {
+    fn filter<T: Filterable>(&self, content: &T) -> bool {
         if self.users.is_empty() && self.subreddits.is_empty() {
             return true;
         }
-        if self.users.contains(comment.author.as_str()) {
+        if content
+            .author()
+            .map(|author| self.users.contains(author))
+            .unwrap_or_default()
+        {
             return true;
         }
-        if self.subreddits.contains(comment.subreddit.as_str()) {
+        if self.subreddits.contains(content.subreddit()) {
             return true;
         }
         false
     }
 }
 
-fn deserialize_lines(line: io::Result<String>) -> comment::Comment {
-    let line = line.unwrap();
-    Comment::from_json_str(line.as_str())
-}
-
-fn iter_comments(filename: &Path) -> Box<dyn Iterator<Item = comment::Comment>> {
+fn iter_lines(filename: &Path) -> Box<dyn Iterator<Item = String>> {
     let extension = filename.extension().unwrap().to_str().unwrap();
     if extension == "gz" {
         let gzip_file = decompress::gzip_file(filename);
-        let iter = gzip_file.lines().into_iter().map(deserialize_lines);
+        let iter = gzip_file.lines().into_iter().map(io::Result::unwrap);
         return Box::new(iter);
     } else if extension == "bz2" {
         let reader = fs::File::open(filename).unwrap();
         let decoder = BufReader::new(BzDecoder::new(reader));
-        let iter = decoder.lines().into_iter().map(deserialize_lines);
+        let iter = decoder.lines().into_iter().map(io::Result::unwrap);
         return Box::new(iter);
     } else if extension == "xz" {
         let reader = fs::File::open(filename).unwrap();
         let decoder = BufReader::new(XzDecoder::new_multi_decoder(reader));
-        let iter = decoder.lines().into_iter().map(deserialize_lines);
+        let iter = decoder.lines().into_iter().map(io::Result::unwrap);
         return Box::new(iter);
     } else if extension == "zst" {
         let reader = fs::File::open(filename).unwrap();
         let decoder = BufReader::new(zstd::stream::read::Decoder::new(reader).unwrap());
-        let iter = decoder.lines().into_iter().map(deserialize_lines);
+        let iter = decoder.lines().into_iter().map(io::Result::unwrap);
         return Box::new(iter);
     }
     panic!("Unknown file extension for file {}", filename.display());
+}
+
+// TODO: Use a standard deserialize trait
+trait FromJsonString {
+    fn from_json_str(line: &str) -> Self;
+}
+
+trait Filterable {
+    fn score(&self) -> i32;
+    fn author(&self) -> Option<&str>;
+    fn subreddit(&self) -> &str;
+    fn created(&self) -> i64;
 }

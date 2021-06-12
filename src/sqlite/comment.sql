@@ -14,9 +14,9 @@ CREATE TABLE IF NOT EXISTS comment (id INTEGER PRIMARY KEY,
                                     parent_id TEXT NOT NULL,
                                     parent_is_post BOOLEAN NOT NULL);
 
-CREATE INDEX IF NOT EXISTS idx_parent_id ON comment (parent_id);
-CREATE INDEX IF NOT EXISTS idx_author ON comment (author);
-CREATE INDEX IF NOT EXISTS idx_subreddit ON comment (subreddit);
+CREATE INDEX IF NOT EXISTS idx_comment_parent_id ON comment (parent_id);
+CREATE INDEX IF NOT EXISTS idx_comment_author ON comment (author);
+CREATE INDEX IF NOT EXISTS idx_comment_subreddit ON comment (subreddit);
 
 
 CREATE VIRTUAL TABLE IF NOT EXISTS comment_fts USING fts5(author, subreddit, body, content = 'comment', content_rowid = 'id');
