@@ -35,13 +35,9 @@ pub struct Submission {
 
 impl FromJsonString for Submission {
     fn from_json_str(line: &str) -> Self {
-        let json: serde_json::Value = serde_json::from_str(line.trim_matches(char::from(0)))
-            .with_context(|| format!("Failed to read json for line: {}", line))
-            .unwrap();
-        let ret = Submission::deserialize(json)
+        serde_json::from_str(line.trim_matches(char::from(0)))
             .with_context(|| format!("Failed to deserialize line: {}", line))
-            .unwrap();
-        ret
+            .unwrap()
     }
 }
 

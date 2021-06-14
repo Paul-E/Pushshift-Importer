@@ -31,11 +31,11 @@ use crate::{
 use bzip2::read::BzDecoder;
 use clap::{App, Arg};
 use xz2::read::XzDecoder;
+use log::info;
+use simple_logger::SimpleLogger;
 
 fn main() {
-    // let test = include_str!("example.json");
-    // Submission::from_json_str(test);
-    // println!("Test string passed");
+    SimpleLogger::new().init().unwrap();
     let matches = App::new("pushshift-importer")
         .version("0.1")
         .author("Paul Ellenbogen")
@@ -89,10 +89,12 @@ fn main() {
     let filter: Arc<Filter> = Arc::new(Filter { users, subreddits });
     if let Some(comments_dir) = matches.value_of("comments") {
         let file_list = get_file_list(Path::new(comments_dir));
+        info!("Processing comments");
         process::<_, Comment>(file_list, filter.clone(), &sqlite);
     }
     if let Some(submissions_dir) = matches.value_of("submissions") {
         let file_list = get_file_list(Path::new(submissions_dir));
+        info!("Processing submissions");
         process::<_, Submission>(file_list, filter, &sqlite);
     }
 }
