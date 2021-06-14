@@ -1,6 +1,6 @@
 # Pushshift data importer for reddit data
 
-This tool takes Pushshift [data dumps](https://files.pushshift.io/reddit/) and creates a Sqlite database. Running this tool against the comments archive will create a sqlite file that enables full text search using the [FTS5](https://www.sqlite.org/fts5.html) extension of Sqlite. Posts are not currently supported.
+This tool takes Pushshift [data dumps](https://files.pushshift.io/reddit/) and creates a Sqlite database. Running this tool against the comments archive will create a sqlite file that enables full text search using the [FTS5](https://www.sqlite.org/fts5.html) extension of Sqlite.
 
 ## Requirements
  * [Rust compiler](https://www.rust-lang.org/tools/install)
@@ -9,7 +9,7 @@ This tool takes Pushshift [data dumps](https://files.pushshift.io/reddit/) and c
 
 The following command will scan `SOME_PATH/comments` for compressed JSON comments from Pushshift and stores them in a sqlite database named `out.db`.
 
-    cargo run --release -- SOME_PATH/comments out.db
+    cargo run --release -- --comments SOME_PATH/comments --submissions SOME_PATH/submissions out.db
 
 This will create a very large sqlite database, and may include more data than is necessary. The importer can take subreddit and username filters to limit the amount of data imported.
 
@@ -47,3 +47,32 @@ The [FTS5](https://www.sqlite.org/fts5.html) table for comments is defined as
     comment_fts USING fts5(author, subreddit, body, content = 'comment', content_rowid = 'id')
 
 The query `SELECT * FROM comment_fts WHERE body MATCH 'snoo'` will search all reddit comments in the database for the word "snoo".
+
+### Submission Schema
+
+The submission table has the following schema
+
+    CREATE TABLE IF NOT EXISTS submission (id INTEGER PRIMARY KEY,
+                                           reddit_id TEXT UNIQUE NOT NULL,
+                                           author TEXT,
+                                           title TEXT NOT NULL,
+                                           author_flair_text TEXT,
+                                           subreddit TEXT NOT NULL,
+                                           selftext TEXT,
+                                           permalink TEXT,
+                                           domain TEXT,
+                                           url TEXT,
+                                           score INTEGER NOT NULL,
+                                           ups INTEGER,
+                                           downs INTEGER,
+                                           created_utc INTEGER NOT NULL,
+                                           retrieved_on INTEGER,
+                                           is_self BOOLEAN NOT NULL,
+                                           over_18 BOOLEAN NOT NULL,
+                                           spoiler BOOL,
+                                           stickied BOOL,
+                                           num_crossposts INTEGER);
+
+With the FTS schema being defined by:
+
+    CREATE VIRTUAL TABLE IF NOT EXISTS submission_fts USING fts5(author UNINDEXED, subreddit UNINDEXED, title, selftext, content = 'submission', content_rowid = 'id');
