@@ -30,9 +30,9 @@ use crate::{
 };
 use bzip2::read::BzDecoder;
 use clap::{App, Arg};
-use xz2::read::XzDecoder;
 use log::info;
 use simple_logger::SimpleLogger;
+use xz2::read::XzDecoder;
 
 fn main() {
     SimpleLogger::new().init().unwrap();
@@ -85,21 +85,21 @@ fn main() {
         .map(|users| users.map(|user| user.to_string()).collect())
         .unwrap_or_else(HashSet::new);
     let sqlite_filename = Path::new(matches.value_of("sqlite-outfile").unwrap());
-    let sqlite = Sqlite::new(sqlite_filename).expect("Error setting up sqlite DB");
+    let mut sqlite = Sqlite::new(sqlite_filename).expect("Error setting up sqlite DB");
     let filter: Arc<Filter> = Arc::new(Filter { users, subreddits });
     if let Some(comments_dir) = matches.value_of("comments") {
         let file_list = get_file_list(Path::new(comments_dir));
         info!("Processing comments");
-        process::<_, Comment>(file_list, filter.clone(), &sqlite);
+        process::<_, Comment>(file_list, filter.clone(), &mut sqlite);
     }
     if let Some(submissions_dir) = matches.value_of("submissions") {
         let file_list = get_file_list(Path::new(submissions_dir));
         info!("Processing submissions");
-        process::<_, Submission>(file_list, filter, &sqlite);
+        process::<_, Submission>(file_list, filter, &mut sqlite);
     }
 }
 
-fn process<T, U>(file_list: Vec<PathBuf>, filter: Arc<Filter>, db: &T)
+fn process<T, U>(file_list: Vec<PathBuf>, filter: Arc<Filter>, db: &mut T)
 where
     T: Storage,
     U: Storable + FromJsonString + Filterable + Send + 'static,
@@ -122,11 +122,14 @@ where
         threads.push(thread);
     }
 
+    let mut count: usize = 0;
+
     loop {
         let maybe_content: Result<U, _> = rx.try_recv();
         match maybe_content {
             Ok(content) => {
                 content.store(db).expect("Error inserting content");
+                count += 1;
             }
             Err(mpsc::TryRecvError::Disconnected) => {
                 maybe_content.unwrap();
@@ -140,6 +143,8 @@ where
             }
         }
     }
+
+    info!("Processed {} items", count);
 
     for thread in threads {
         thread.join().unwrap();
