@@ -6,6 +6,7 @@ extern crate serde_json;
 
 mod comment;
 mod decompress;
+mod filter;
 mod sqlite;
 mod storage;
 mod submission;
@@ -24,6 +25,7 @@ use std::{
 use crate::hashbrown::HashSet;
 use crate::{
     comment::Comment,
+    filter::{Filter, Filterable},
     sqlite::Sqlite,
     storage::{Storable, Storage},
     submission::Submission,
@@ -53,9 +55,10 @@ fn main() {
             .long("submissions")
             .help("Directory where compressed json files containing submissions are located")
             .takes_value(true))
-        .arg(Arg::with_name("filter-config")
-            .long("filter-config")
-            .help("File containing filter configuration")
+        .arg(Arg::with_name("config")
+            .long("config")
+            .help("File containing configuration")
+            .required(false)
             .takes_value(true))
         .arg(
             Arg::with_name("username")
@@ -86,7 +89,7 @@ fn main() {
         .unwrap_or_else(HashSet::new);
     let sqlite_filename = Path::new(matches.value_of("sqlite-outfile").unwrap());
     let mut sqlite = Sqlite::new(sqlite_filename).expect("Error setting up sqlite DB");
-    let filter: Arc<Filter> = Arc::new(Filter { users, subreddits });
+    let filter: Arc<Filter> = Arc::new(Filter::new(users, subreddits ));
     if let Some(comments_dir) = matches.value_of("comments") {
         let file_list = get_file_list(Path::new(comments_dir));
         info!("Processing comments");
@@ -199,31 +202,6 @@ impl<T: FromJsonString + Filterable> ThreadContext<T> {
     }
 }
 
-#[derive(Debug, Clone, Default)]
-struct Filter {
-    users: HashSet<String>,
-    subreddits: HashSet<String>,
-}
-
-impl Filter {
-    fn filter<T: Filterable>(&self, content: &T) -> bool {
-        if self.users.is_empty() && self.subreddits.is_empty() {
-            return true;
-        }
-        if content
-            .author()
-            .map(|author| self.users.contains(author))
-            .unwrap_or_default()
-        {
-            return true;
-        }
-        if self.subreddits.contains(content.subreddit()) {
-            return true;
-        }
-        false
-    }
-}
-
 fn iter_lines(filename: &Path) -> Box<dyn Iterator<Item = String>> {
     let extension = filename.extension().unwrap().to_str().unwrap();
     if extension == "gz" {
@@ -252,11 +230,4 @@ fn iter_lines(filename: &Path) -> Box<dyn Iterator<Item = String>> {
 // TODO: Use a standard deserialize trait
 trait FromJsonString {
     fn from_json_str(line: &str) -> Self;
-}
-
-trait Filterable {
-    fn score(&self) -> i32;
-    fn author(&self) -> Option<&str>;
-    fn subreddit(&self) -> &str;
-    fn created(&self) -> i64;
 }
