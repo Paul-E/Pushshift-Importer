@@ -107,7 +107,7 @@ where
     let shared_file_list = Arc::new(RwLock::new(file_list));
     let completed = Arc::new(AtomicUsize::new(0));
     let mut threads = Vec::new();
-    let (tx, rx) = mpsc::channel();
+    let (tx, rx) = mpsc::sync_channel(10000);
     let num_cpus = num_cpus::get_physical();
     for _i in 0..(num_cpus - 1) {
         let filter_context = ThreadContext::new(
@@ -163,7 +163,7 @@ struct ThreadContext<T> {
     filter: Arc<Filter>,
     queue: Arc<RwLock<Vec<PathBuf>>>,
     completed: Arc<AtomicUsize>,
-    send_channel: mpsc::Sender<T>,
+    send_channel: mpsc::SyncSender<T>,
 }
 
 impl<T: FromJsonString + Filterable> ThreadContext<T> {
@@ -171,7 +171,7 @@ impl<T: FromJsonString + Filterable> ThreadContext<T> {
         filter: Arc<Filter>,
         queue: Arc<RwLock<Vec<PathBuf>>>,
         completed: Arc<AtomicUsize>,
-        send_channel: mpsc::Sender<T>,
+        send_channel: mpsc::SyncSender<T>,
     ) -> Self {
         ThreadContext {
             filter,
