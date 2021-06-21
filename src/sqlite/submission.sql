@@ -19,9 +19,6 @@ CREATE TABLE IF NOT EXISTS submission (id INTEGER PRIMARY KEY,
                                        stickied BOOL,
                                        num_crossposts INTEGER);
 
-CREATE INDEX IF NOT EXISTS idx_submission_author ON submission (author);
-CREATE INDEX IF NOT EXISTS idx_submission_subreddit ON submission (subreddit);
-
 
 CREATE VIRTUAL TABLE IF NOT EXISTS submission_fts USING fts5(author UNINDEXED, subreddit UNINDEXED, title, selftext, content = 'submission', content_rowid = 'id');
 
