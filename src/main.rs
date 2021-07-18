@@ -34,6 +34,9 @@ use log::info;
 use simple_logger::SimpleLogger;
 use xz2::read::XzDecoder;
 
+// represents the maximum distance as calculated by 2^log_distance for a decode window in zstd.
+const ZSTD_DECODE_WINDOW_LOG_MAX: u32 = 31;
+
 fn main() {
     SimpleLogger::new().init().unwrap();
     let matches = App::new("pushshift-importer")
@@ -242,7 +245,9 @@ fn iter_lines(filename: &Path) -> Box<dyn Iterator<Item = String>> {
         return Box::new(iter);
     } else if extension == "zst" {
         let reader = fs::File::open(filename).unwrap();
-        let decoder = BufReader::new(zstd::stream::read::Decoder::new(reader).unwrap());
+        let stream_decoder = zstd::stream::read::Decoder::new(reader)
+            .and_then(|mut d| d.window_log_max(ZSTD_DECODE_WINDOW_LOG_MAX).map(|_| d));
+        let decoder = BufReader::new(stream_decoder.unwrap());
         let iter = decoder.lines().into_iter().map(io::Result::unwrap);
         return Box::new(iter);
     }
