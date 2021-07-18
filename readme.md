@@ -15,7 +15,7 @@ This will create a very large sqlite database, and may include more data than is
 
 The command below will create a sqlite file named "out.db" that contains all comments from the /r/pushshift subreddit.
 
-    cargo run --release -- SOME_PATH/comments out.db --subreddit pushshift
+    cargo run --release -- --comments SOME_PATH/comments out.db --subreddit pushshift
 
 `--subreddit` and `--username` filters can be specified mulitple times, and content will be included if *any* of the filters match.
 
