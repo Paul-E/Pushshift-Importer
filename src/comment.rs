@@ -14,7 +14,7 @@ pub struct Comment {
     pub author_flair_text: Option<String>,
     #[serde(default)]
     author_flair_css_class: Option<String>,
-    pub score: i32,
+    pub score: Option<i32>,
     ups: Option<i32>,
     downs: Option<i32>,
     pub created_utc: i64,
@@ -62,7 +62,7 @@ impl FromJsonString for Comment {
 }
 
 impl Filterable for Comment {
-    fn score(&self) -> i32 {
+    fn score(&self) -> Option<i32> {
         self.score
     }
     fn author(&self) -> Option<&str> {

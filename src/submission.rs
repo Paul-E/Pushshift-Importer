@@ -10,7 +10,7 @@ pub struct Submission {
     pub author: Option<String>,
     pub url: String,
     pub permalink: String,
-    pub score: i32,
+    pub score: Option<i32>,
     pub title: String,
     pub selftext: String,
     pub domain: String,
@@ -24,11 +24,11 @@ pub struct Submission {
     pub link_flair_text: Option<String>,
     pub spoiler: Option<bool>,
     pub pinned: Option<bool>,
-    pub stickied: Option<bool>,
+    #[serde(default)]
+    pub stickied: bool,
     pub num_crossposts: Option<u32>,
     pub ups: Option<i32>,
     pub downs: Option<i32>,
-    created: Option<i64>,
     #[serde(deserialize_with = "deserialize_time")]
     pub created_utc: i64,
     pub retrieved_on: Option<i64>,
@@ -42,7 +42,7 @@ impl FromJsonString for Submission {
 }
 
 impl Filterable for Submission {
-    fn score(&self) -> i32 {
+    fn score(&self) -> Option<i32> {
         self.score
     }
     fn author(&self) -> Option<&str> {

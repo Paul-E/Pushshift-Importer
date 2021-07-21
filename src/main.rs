@@ -275,7 +275,7 @@ trait FromJsonString {
 }
 
 trait Filterable {
-    fn score(&self) -> i32;
+    fn score(&self) -> Option<i32>;
     fn author(&self) -> Option<&str>;
     fn subreddit(&self) -> Option<&str>;
     fn created(&self) -> i64;

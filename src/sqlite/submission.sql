@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS submission (id INTEGER PRIMARY KEY,
                                        permalink TEXT,
                                        domain TEXT,
                                        url TEXT,
-                                       score INTEGER NOT NULL,
+                                       score INTEGER,
                                        ups INTEGER,
                                        downs INTEGER,
                                        created_utc INTEGER NOT NULL,
@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS submission (id INTEGER PRIMARY KEY,
                                        is_self BOOLEAN NOT NULL,
                                        over_18 BOOLEAN NOT NULL,
                                        spoiler BOOL,
-                                       stickied BOOL,
+                                       stickied BOOL NOT NULL,
                                        num_crossposts INTEGER);
 
 
