@@ -28,9 +28,10 @@ use crate::{
     storage::{Storable, Storage},
     submission::Submission,
 };
+use anyhow::Result;
 use bzip2::read::BzDecoder;
 use clap::{App, Arg};
-use log::info;
+use log::{error, info};
 use simple_logger::SimpleLogger;
 use xz2::read::XzDecoder;
 
@@ -191,10 +192,18 @@ impl<T: FromJsonString + Filterable> ThreadContext<T> {
 
     fn process_queue(&self) {
         while let Some(filename) = self.get_next_file() {
-            for content in iter_lines(filename.as_path())
+            let item_iterator = iter_lines(filename.as_path())
                 .map(|line| T::from_json_str(line.as_str()))
-                .filter(|content| self.filter.filter(content))
-            {
+                .filter_map(|maybe_content| {
+                    maybe_content
+                        .map_err(|err| {
+                            error!("Error parsing content: {:#?}", err);
+                            err
+                        })
+                        .ok()
+                })
+                .filter(|content| self.filter.filter(content));
+            for content in item_iterator {
                 self.send_channel.send(content).unwrap();
             }
         }
@@ -220,7 +229,11 @@ impl Filter {
         {
             return true;
         }
-        if self.subreddits.contains(content.subreddit()) {
+        if content
+            .subreddit()
+            .map(|subreddit| self.subreddits.contains(subreddit))
+            .unwrap_or_default()
+        {
             return true;
         }
         false
@@ -256,12 +269,14 @@ fn iter_lines(filename: &Path) -> Box<dyn Iterator<Item = String>> {
 
 // TODO: Use a standard deserialize trait
 trait FromJsonString {
-    fn from_json_str(line: &str) -> Self;
+    fn from_json_str(line: &str) -> Result<Self>
+    where
+        Self: Sized;
 }
 
 trait Filterable {
     fn score(&self) -> i32;
     fn author(&self) -> Option<&str>;
-    fn subreddit(&self) -> &str;
+    fn subreddit(&self) -> Option<&str>;
     fn created(&self) -> i64;
 }

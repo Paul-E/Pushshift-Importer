@@ -36,13 +36,12 @@ pub struct Comment {
 }
 
 impl FromJsonString for Comment {
-    fn from_json_str(line: &str) -> Self {
+    fn from_json_str(line: &str) -> Result<Self> {
         let mut json: serde_json::Value = serde_json::from_str(line)
-            .with_context(|| format!("Failed to read json for line: {}", line))
-            .unwrap();
+            .with_context(|| format!("Failed to read json for line: {}", line))?;
         if let Some(created) = json.get_mut("created_utc") {
             if let serde_json::Value::String(utc_string) = created {
-                let utc: u64 = utc_string.parse().unwrap();
+                let utc: u64 = utc_string.parse()?;
                 *created = utc.into();
             }
         }
@@ -52,14 +51,13 @@ impl FromJsonString for Comment {
             }
         }
         let mut comment = Comment::deserialize(json)
-            .with_context(|| format!("Failed to deserialize line: {}", line))
-            .unwrap();
+            .with_context(|| format!("Failed to deserialize line: {}", line))?;
 
         if comment.parent_id.starts_with("t3_") {
             comment.parent_is_post = true;
         }
         comment.parent_id = comment.parent_id.split_off(2);
-        comment
+        Ok(comment)
     }
 }
 
@@ -70,8 +68,8 @@ impl Filterable for Comment {
     fn author(&self) -> Option<&str> {
         Some(self.author.as_str())
     }
-    fn subreddit(&self) -> &str {
-        self.subreddit.as_str()
+    fn subreddit(&self) -> Option<&str> {
+        Some(self.subreddit.as_str())
     }
     fn created(&self) -> i64 {
         self.created_utc

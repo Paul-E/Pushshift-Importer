@@ -65,10 +65,10 @@ impl Storage for Sqlite {
                                                                                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \
                                                                                 ON CONFLICT DO NOTHING").unwrap();
             let params = params![
-                submission.subreddit_id.as_str(),
+                submission.id.as_str(),
                 submission.author.as_deref(),
                 submission.title.as_str(),
-                submission.subreddit.as_str(),
+                submission.subreddit.as_deref(),
                 submission.selftext.as_str(),
                 submission.permalink.as_str(),
                 submission.domain.as_str(),
