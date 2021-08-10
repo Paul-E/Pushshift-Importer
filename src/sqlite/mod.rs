@@ -1,12 +1,24 @@
 use std::path::Path;
 
 use anyhow::{Context, Result};
-use rusqlite::{params, Connection};
+use rusqlite::{params, Connection, OpenFlags};
+use log::info;
 
 use crate::{comment::Comment, storage::Storage, submission::Submission};
 
 const SETUP_COMMENTS: &str = include_str!("comment.sql");
 const SETUP_SUBMISSIONS: &str = include_str!("submission.sql");
+const PRAGMA: &str = "PRAGMA journal_mode=WAL;
+                      PRAGMA recursive_triggers = ON;
+                      PRAGMA synchronous = NORMAL;
+                      PRAGMA max_page_count = 4294967292;";
+
+const UNSAFE_PRAGMA: &str = "PRAGMA journal_mode=MEMORY;
+                             PRAGMA temp_store = memory;
+                             PRAGMA recursive_triggers = ON;
+                             PRAGMA synchronous = OFF;
+                             PRAGMA max_page_count = 4294967292;";
+const TRANSACTION_SIZE: usize = 10000;
 
 pub struct Sqlite {
     connection: Connection,
@@ -14,8 +26,19 @@ pub struct Sqlite {
 }
 
 impl Sqlite {
-    pub fn new(filename: &Path) -> Result<Self> {
-        let connection = Connection::open(filename).unwrap();
+    pub fn new(filename: &Path, unsafe_pragma: bool) -> Result<Self> {
+        let connection = Connection::open_with_flags(
+            filename,
+            OpenFlags::SQLITE_OPEN_NO_MUTEX
+                | OpenFlags::SQLITE_OPEN_READ_WRITE
+                | OpenFlags::SQLITE_OPEN_CREATE,
+        )?;
+        if unsafe_pragma {
+            info!("Executing in unsafe-mode. Do not interrupt as crashes will corrupt the database.");
+            connection.execute_batch(UNSAFE_PRAGMA)?;
+        } else {
+            connection.execute_batch(PRAGMA)?;
+        }
         connection.execute_batch(SETUP_COMMENTS)?;
         connection.execute_batch(SETUP_SUBMISSIONS)?;
         connection.execute_batch("BEGIN DEFERRED")?;
@@ -26,7 +49,7 @@ impl Sqlite {
     }
 
     fn check_transaction(&mut self) -> Result<()> {
-        if self.in_transaction >= 500 {
+        if self.in_transaction >= TRANSACTION_SIZE {
             self.connection.execute_batch("COMMIT")?;
             self.connection.execute_batch("BEGIN DEFERRED")?;
             self.in_transaction = 0;
