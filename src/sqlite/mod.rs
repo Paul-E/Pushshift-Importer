@@ -7,7 +7,9 @@ use log::info;
 use crate::{comment::Comment, storage::Storage, submission::Submission};
 
 const SETUP_COMMENTS: &str = include_str!("comment.sql");
+const COMMENTS_FTS: &str = include_str!("comment_fts.sql");
 const SETUP_SUBMISSIONS: &str = include_str!("submission.sql");
+const SUBMISSIONS_FTS: &str = include_str!("submission_fts.sql");
 const PRAGMA: &str = "PRAGMA journal_mode=WAL;
                       PRAGMA recursive_triggers = ON;
                       PRAGMA synchronous = NORMAL;
@@ -26,7 +28,7 @@ pub struct Sqlite {
 }
 
 impl Sqlite {
-    pub fn new(filename: &Path, unsafe_pragma: bool) -> Result<Self> {
+    pub fn new(filename: &Path, unsafe_pragma: bool, fts: bool) -> Result<Self> {
         let connection = Connection::open_with_flags(
             filename,
             OpenFlags::SQLITE_OPEN_NO_MUTEX
@@ -41,6 +43,10 @@ impl Sqlite {
         }
         connection.execute_batch(SETUP_COMMENTS)?;
         connection.execute_batch(SETUP_SUBMISSIONS)?;
+        if fts {
+            connection.execute_batch(COMMENTS_FTS)?;
+            connection.execute_batch(SUBMISSIONS_FTS)?;
+        }
         connection.execute_batch("BEGIN DEFERRED")?;
         Ok(Sqlite {
             connection,

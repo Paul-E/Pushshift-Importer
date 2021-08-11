@@ -89,6 +89,11 @@ fn main() {
             .required(false)
             .takes_value(false)
             .help("Store some database structures in memory, improving performance at the const of durability. Errors will cause database corruption. This flag is used for testing."))
+        .arg(Arg::with_name("disable-fts")
+            .long("disable-fts")
+            .required(false)
+            .takes_value(false)
+            .help("Disable full text search features. Disabling FTS creates a smaller database and may run faster."))
         .about("Import data from pushshift dump into a Sqlite database. Currently limited to comment data only.\
         Multiple filters can be applied, and if any of the filter criteria match, the comment is included. If no filters are supplied, all comments match; ie the whole dataset will be added to the sqlite file.")
         .get_matches();
@@ -101,7 +106,7 @@ fn main() {
         .map(|users| users.map(|user| user.to_string()).collect())
         .unwrap_or_else(HashSet::new);
     let sqlite_filename = Path::new(matches.value_of("sqlite-outfile").unwrap());
-    let mut sqlite = Sqlite::new(sqlite_filename, matches.is_present("unsafe-mode")).expect("Error setting up sqlite DB");
+    let mut sqlite = Sqlite::new(sqlite_filename, matches.is_present("unsafe-mode"), !matches.is_present("disable-fts")).expect("Error setting up sqlite DB");
     let filter: Arc<Filter> = Arc::new(Filter { users, subreddits });
     if let Some(comments_dir) = matches.value_of("comments") {
         let file_list = get_file_list(Path::new(comments_dir));
