@@ -15,8 +15,8 @@ pub struct Comment {
     #[serde(default)]
     author_flair_css_class: Option<String>,
     pub score: Option<i32>,
-    ups: Option<i32>,
-    downs: Option<i32>,
+    pub ups: Option<i32>,
+    pub downs: Option<i32>,
     pub created_utc: i64,
     #[serde(default)]
     pub retrieved_on: Option<i64>,
