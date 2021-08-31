@@ -4,15 +4,8 @@ extern crate hashbrown;
 extern crate serde;
 extern crate serde_json;
 
-mod comment;
-mod decompress;
-mod sqlite;
-mod storage;
-mod submission;
-
 use std::{
     fs,
-    io::{self, BufRead, BufReader},
     path::{Path, PathBuf},
     sync::{
         atomic::{AtomicUsize, Ordering},
@@ -21,6 +14,11 @@ use std::{
     thread, time,
 };
 
+use anyhow::Result;
+use clap::{App, Arg};
+use log::{error, warn, info};
+use simple_logger::SimpleLogger;
+
 use crate::hashbrown::HashSet;
 use crate::{
     comment::Comment,
@@ -28,12 +26,12 @@ use crate::{
     storage::{Storable, Storage},
     submission::Submission,
 };
-use anyhow::Result;
-use bzip2::read::BzDecoder;
-use clap::{App, Arg};
-use log::{error, info};
-use simple_logger::SimpleLogger;
-use xz2::read::XzDecoder;
+
+mod comment;
+mod decompress;
+mod sqlite;
+mod storage;
+mod submission;
 
 // represents the maximum distance as calculated by 2^log_distance for a decode window in zstd.
 const ZSTD_DECODE_WINDOW_LOG_MAX: u32 = 31;
@@ -106,7 +104,12 @@ fn main() {
         .map(|users| users.map(|user| user.to_string()).collect())
         .unwrap_or_else(HashSet::new);
     let sqlite_filename = Path::new(matches.value_of("sqlite-outfile").unwrap());
-    let mut sqlite = Sqlite::new(sqlite_filename, matches.is_present("unsafe-mode"), !matches.is_present("disable-fts")).expect("Error setting up sqlite DB");
+    let mut sqlite = Sqlite::new(
+        sqlite_filename,
+        matches.is_present("unsafe-mode"),
+        !matches.is_present("disable-fts"),
+    )
+    .expect("Error setting up sqlite DB");
     let filter: Arc<Filter> = Arc::new(Filter { users, subreddits });
     if let Some(comments_dir) = matches.value_of("comments") {
         let file_list = get_file_list(Path::new(comments_dir));
@@ -209,7 +212,15 @@ impl<T: FromJsonString + Filterable> ThreadContext<T> {
 
     fn process_queue(&self) {
         while let Some(filename) = self.get_next_file() {
-            let item_iterator = iter_lines(filename.as_path())
+            let lines = match decompress::iter_lines(filename.as_path()) {
+                Ok(l) => l,
+                Err(e) => {
+                    warn!("error encountered when input reading file: {:#}", e);
+                    continue;
+                }
+            };
+
+            let item_iterator = lines
                 .map(|line| T::from_json_str(line.as_str()))
                 .filter_map(|maybe_content| {
                     maybe_content
@@ -255,33 +266,6 @@ impl Filter {
         }
         false
     }
-}
-
-fn iter_lines(filename: &Path) -> Box<dyn Iterator<Item = String>> {
-    let extension = filename.extension().unwrap().to_str().unwrap();
-    if extension == "gz" {
-        let gzip_file = decompress::gzip_file(filename);
-        let iter = gzip_file.lines().into_iter().map(io::Result::unwrap);
-        return Box::new(iter);
-    } else if extension == "bz2" {
-        let reader = fs::File::open(filename).unwrap();
-        let decoder = BufReader::new(BzDecoder::new(reader));
-        let iter = decoder.lines().into_iter().map(io::Result::unwrap);
-        return Box::new(iter);
-    } else if extension == "xz" {
-        let reader = fs::File::open(filename).unwrap();
-        let decoder = BufReader::new(XzDecoder::new_multi_decoder(reader));
-        let iter = decoder.lines().into_iter().map(io::Result::unwrap);
-        return Box::new(iter);
-    } else if extension == "zst" {
-        let reader = fs::File::open(filename).unwrap();
-        let stream_decoder = zstd::stream::read::Decoder::new(reader)
-            .and_then(|mut d| d.window_log_max(ZSTD_DECODE_WINDOW_LOG_MAX).map(|_| d));
-        let decoder = BufReader::new(stream_decoder.unwrap());
-        let iter = decoder.lines().into_iter().map(io::Result::unwrap);
-        return Box::new(iter);
-    }
-    panic!("Unknown file extension for file {}", filename.display());
 }
 
 // TODO: Use a standard deserialize trait

@@ -1,8 +1,8 @@
 use std::path::Path;
 
 use anyhow::{Context, Result};
-use rusqlite::{params, Connection, OpenFlags};
 use log::info;
+use rusqlite::{params, Connection, OpenFlags};
 
 use crate::{comment::Comment, storage::Storage, submission::Submission};
 
@@ -36,7 +36,9 @@ impl Sqlite {
                 | OpenFlags::SQLITE_OPEN_CREATE,
         )?;
         if unsafe_pragma {
-            info!("Executing in unsafe-mode. Do not interrupt as crashes will corrupt the database.");
+            info!(
+                "Executing in unsafe-mode. Do not interrupt as crashes will corrupt the database."
+            );
             connection.execute_batch(UNSAFE_PRAGMA)?;
         } else {
             connection.execute_batch(PRAGMA)?;

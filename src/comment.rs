@@ -78,6 +78,6 @@ impl Filterable for Comment {
 
 impl Storable for Comment {
     fn store<T: Storage>(&self, storage: &mut T) -> Result<usize> {
-        storage.insert_comment(&self)
+        storage.insert_comment(self)
     }
 }
