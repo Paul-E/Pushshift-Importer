@@ -33,8 +33,7 @@ mod sqlite;
 mod storage;
 mod submission;
 
-// represents the maximum distance as calculated by 2^log_distance for a decode window in zstd.
-const ZSTD_DECODE_WINDOW_LOG_MAX: u32 = 31;
+
 
 fn main() {
     SimpleLogger::new().init().unwrap();

@@ -9,7 +9,8 @@ use bzip2::read::BzDecoder;
 use flate2::read::GzDecoder;
 use xz2::read::XzDecoder;
 
-use crate::ZSTD_DECODE_WINDOW_LOG_MAX;
+// represents the maximum distance as calculated by 2^log_distance for a decode window in zstd.
+const ZSTD_DECODE_WINDOW_LOG_MAX: u32 = 31;
 
 pub fn iter_lines(filename: &Path) -> Result<Box<dyn Iterator<Item = String>>> {
     let extension = filename.extension().and_then(|extension| extension.to_str()).ok_or_else(|| anyhow!("cannot the file extension for {}", filename.display()))?;
