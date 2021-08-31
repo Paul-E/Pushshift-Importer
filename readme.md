@@ -4,24 +4,44 @@ This tool takes Pushshift [data dumps](https://files.pushshift.io/reddit/) and c
 
 ## Requirements
  * [Rust compiler](https://www.rust-lang.org/tools/install)
+ * Data from Pushshift [data dumps](https://files.pushshift.io/reddit/) (or files in a compatible JSON format)
 
-## Example
+## Running the importer
+### Quick start
 
-The following command will scan `SOME_PATH/comments` for compressed JSON comments from Pushshift and stores them in a sqlite database named `out.db`.
+The following command will scan `SOME_PATH/comments` for compressed JSON comments `SOME_PATH/submissions` for compressed
+JSON comments and stores them in a sqlite database named `out.db`. 
 
-    cargo run --release -- --comments SOME_PATH/comments --submissions SOME_PATH/submissions out.db
+    cargo run --release -- --comments SOME_PATH/comments --submissions SOME_PATH/submissions SOME_PATH/out.db
 
-This will create a very large sqlite database, and may include more data than is necessary. The importer can take subreddit and username filters to limit the amount of data imported.
+The input comments files, submissions files, and output file should be located in different directories. The input file
+format is specified by the JSON files that exists in the Pushshift data dump.
 
-The command below will create a sqlite file named "out.db" that contains all comments from the /r/pushshift subreddit.
+### Filtering
 
-    cargo run --release -- --comments SOME_PATH/comments out.db --subreddit pushshift
+Running the command above will create a very large sqlite database, and may include more data than is necessary.
+The importer can take subreddit and username filters to limit the amount of data imported.
+
+The command below will create a sqlite file named "out.db" that contains all submissions and comments from
+the /r/pushshift subreddit.
+
+    cargo run --release -- --comments SOME_PATH/comments --submissions SOME_PATH/submissions SOME_PATH/out.db --subreddit pushshift
 
 `--subreddit` and `--username` filters can be specified mulitple times, and content will be included if *any* of the filters match.
 
 Note that username and subreddit identifiers are case sensitive. ie specifying `--subreddit PushShift` will yield and empty database.
 
-Now you can run `sqlite3 out.db` to open that db with sqlite. Running `SELECT * FROM comment_fts WHERE body MATCH 'snoo';` in sqlite will return all comments that have the word "snoo" in it.
+#### Available filters:
+
+* `subreddit` - Only include comments and submissions from this subreddit. May be specified multiple times, and
+items will be included if they match any subreddit filter
+* `user` - Only include comments and submissions from this user. May be specified multiple times, and
+items will be included if they match any user filter
+
+## Your database
+Once the importer has run and succesfully completed you can run `sqlite3 out.db` to open that db with sqlite.
+Running `SELECT * FROM comment_fts WHERE body MATCH 'snoo';` in sqlite will return all comments that have the word "snoo" in it.
+Enter `.schema` into the sqlite3 command line to see the table format.
 
 ## Sqlite schema:
 ### Comment Schema
