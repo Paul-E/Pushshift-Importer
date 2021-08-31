@@ -215,7 +215,7 @@ impl<T: FromJsonString + Filterable> ThreadContext<T> {
             let lines = match decompress::iter_lines(filename.as_path()) {
                 Ok(l) => l,
                 Err(e) => {
-                    warn!("error encountered when input reading file: {:#}", e);
+                    warn!("Error encountered in input file: {:#}. Skipping file", e);
                     continue;
                 }
             };
