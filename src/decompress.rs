@@ -4,7 +4,7 @@ use std::io::BufReader;
 use std::path::Path;
 use std::{fs, io};
 
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use bzip2::read::BzDecoder;
 use flate2::read::GzDecoder;
 use xz2::read::XzDecoder;
@@ -13,7 +13,10 @@ use xz2::read::XzDecoder;
 const ZSTD_DECODE_WINDOW_LOG_MAX: u32 = 31;
 
 pub fn iter_lines(filename: &Path) -> Result<Box<dyn Iterator<Item = String>>> {
-    let extension = filename.extension().and_then(|extension| extension.to_str()).ok_or_else(|| anyhow!("cannot the file extension for {}", filename.display()))?;
+    let extension = filename
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .ok_or_else(|| anyhow!("cannot the file extension for {}", filename.display()))?;
     if extension == "gz" {
         let file = File::open(filename)?;
         let gzip_file = BufReader::new(GzDecoder::new(file));

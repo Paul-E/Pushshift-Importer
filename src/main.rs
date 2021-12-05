@@ -16,7 +16,7 @@ use std::{
 
 use anyhow::Result;
 use clap::{App, Arg};
-use log::{error, warn, info};
+use log::{error, info, warn};
 use simple_logger::SimpleLogger;
 
 use crate::hashbrown::HashSet;
@@ -32,7 +32,6 @@ mod decompress;
 mod sqlite;
 mod storage;
 mod submission;
-
 
 fn main() {
     SimpleLogger::new().init().unwrap();

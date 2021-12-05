@@ -68,10 +68,9 @@ where
 {
     let json = serde_json::Value::deserialize(deserializer)?;
     match json {
-        serde_json::Value::Number(val) => val.as_i64().ok_or(serde::de::Error::custom(format!(
-            "invalid timestamp value {}",
-            val
-        ))),
+        serde_json::Value::Number(val) => val
+            .as_i64()
+            .ok_or_else(|| serde::de::Error::custom(format!("invalid timestamp value {}", val))),
         serde_json::Value::String(val) => {
             let ret: i64 = val.parse().map_err(|_| {
                 serde::de::Error::custom(format!("unable to parse timestamp: {}", val))
