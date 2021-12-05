@@ -1,3 +1,4 @@
+extern crate chrono;
 extern crate clap;
 extern crate flate2;
 extern crate hashbrown;
@@ -19,9 +20,9 @@ use clap::{App, Arg};
 use log::{error, info, warn};
 use simple_logger::SimpleLogger;
 
-use crate::hashbrown::HashSet;
 use crate::{
     comment::Comment,
+    filter::{date_format_validator, Filter, Filterable},
     sqlite::Sqlite,
     storage::{Storable, Storage},
     submission::Submission,
@@ -29,6 +30,7 @@ use crate::{
 
 mod comment;
 mod decompress;
+mod filter;
 mod sqlite;
 mod storage;
 mod submission;
@@ -79,6 +81,29 @@ fn main() {
                 .takes_value(true)
                 .help("Only include content with this score or higher"),
         )
+        .arg(
+            Arg::with_name("max-score")
+                .long("max-score")
+                .required(false)
+                .takes_value(true)
+                .help("Only include content with this score or lower"),
+        )
+        .arg(
+            Arg::with_name("min-datetime")
+                .long("min-datetime")
+                .required(false)
+                .takes_value(true)
+                .validator(date_format_validator)
+                .help("Only include content created at or after this date"),
+        )
+        .arg(
+            Arg::with_name("max-datetime")
+                .long("max-datetime")
+                .required(false)
+                .takes_value(true)
+                .validator(date_format_validator)
+                .help("Only include content created at or before this date"),
+        )
         .arg(Arg::with_name("unsafe-mode")
             .long("unsafe-mode")
             .required(false)
@@ -92,14 +117,6 @@ fn main() {
         .about("Import data from pushshift dump into a Sqlite database. Currently limited to comment data only.\
         Multiple filters can be applied, and if any of the filter criteria match, the comment is included. If no filters are supplied, all comments match; ie the whole dataset will be added to the sqlite file.")
         .get_matches();
-    let users: HashSet<String> = matches
-        .values_of("username")
-        .map(|users| users.map(|user| user.to_string()).collect())
-        .unwrap_or_else(HashSet::new);
-    let subreddits: HashSet<String> = matches
-        .values_of("subreddit")
-        .map(|users| users.map(|user| user.to_string()).collect())
-        .unwrap_or_else(HashSet::new);
     let sqlite_filename = Path::new(matches.value_of("sqlite-outfile").unwrap());
     let mut sqlite = Sqlite::new(
         sqlite_filename,
@@ -107,7 +124,7 @@ fn main() {
         !matches.is_present("disable-fts"),
     )
     .expect("Error setting up sqlite DB");
-    let filter: Arc<Filter> = Arc::new(Filter { users, subreddits });
+    let filter: Arc<Filter> = Arc::new(Filter::from_args(&matches));
     if let Some(comments_dir) = matches.value_of("comments") {
         let file_list = get_file_list(Path::new(comments_dir));
         info!("Processing comments");
@@ -236,45 +253,9 @@ impl<T: FromJsonString + Filterable> ThreadContext<T> {
     }
 }
 
-#[derive(Debug, Clone, Default)]
-struct Filter {
-    users: HashSet<String>,
-    subreddits: HashSet<String>,
-}
-
-impl Filter {
-    fn filter<T: Filterable>(&self, content: &T) -> bool {
-        if self.users.is_empty() && self.subreddits.is_empty() {
-            return true;
-        }
-        if content
-            .author()
-            .map(|author| self.users.contains(author))
-            .unwrap_or_default()
-        {
-            return true;
-        }
-        if content
-            .subreddit()
-            .map(|subreddit| self.subreddits.contains(subreddit))
-            .unwrap_or_default()
-        {
-            return true;
-        }
-        false
-    }
-}
-
 // TODO: Use a standard deserialize trait
 trait FromJsonString {
     fn from_json_str(line: &str) -> Result<Self>
     where
         Self: Sized;
-}
-
-trait Filterable {
-    fn score(&self) -> Option<i32>;
-    fn author(&self) -> Option<&str>;
-    fn subreddit(&self) -> Option<&str>;
-    fn created(&self) -> i64;
 }

@@ -27,16 +27,31 @@ the /r/pushshift subreddit.
 
     cargo run --release -- --comments SOME_PATH/comments --submissions SOME_PATH/submissions SOME_PATH/out.db --subreddit pushshift
 
-`--subreddit` and `--username` filters can be specified mulitple times, and content will be included if *any* of the filters match.
+`--subreddit` and `--username` filters can be specified multiple times, and content will be included if *any* of the
+subreddit or username filters match.
 
-Note that username and subreddit identifiers are case sensitive. ie specifying `--subreddit PushShift` will yield and empty database.
+Adding another filter such as `min-score` as below
+
+    cargo run --release -- --comments SOME_PATH/comments --submissions SOME_PATH/submissions SOME_PATH/out.db --subreddit pushshift --min-score 10
+
+will restrict the import to the same content as above, with an additional requirement that 
+
+Note: The username and subreddit identifiers are case sensitive. ie specifying `--subreddit PushShift` will yield and
+empty database (because the subreddit is names `pushshift`).
 
 #### Available filters:
 
-* `subreddit` - Only include comments and submissions from this subreddit. May be specified multiple times, and
+* `subreddit` - Include comments and submissions from this subreddit. May be specified multiple times, and
 items will be included if they match any subreddit filter
-* `user` - Only include comments and submissions from this user. May be specified multiple times, and
+* `user` - Include comments and submissions from this user. May be specified multiple times, and
 items will be included if they match any user filter
+* `min-score` & `max-score` - Only include content with score equal to or between these values. Content without a score is always included 
+* `min-datetime` & `max-datetime` - Only include content posted on or between these dates.
+   The date format is `%Y-%m-%d-%H:%M:%S`, eg `2015-09-05-23:56:04`. Time is assumed to be UTC. To avoid time zone issues,
+   it is probably easiest to add a day on each side of your desired interval.
+  
+The user and subreddit filters are ORed against each other. If the content matches *either* the subreddit filter
+*or* the user filter, the content will be included if the other filter criteria is also satisfied.
 
 ## Your database
 Once the importer has run and succesfully completed you can run `sqlite3 out.db` to open that db with sqlite.
