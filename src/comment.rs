@@ -5,6 +5,7 @@ use crate::{
 use anyhow::{Context, Result};
 use serde::Deserialize;
 
+#[allow(dead_code)]
 #[derive(Deserialize, Debug, Clone)]
 pub struct Comment {
     pub author: String,
