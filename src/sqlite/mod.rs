@@ -19,7 +19,8 @@ const UNSAFE_PRAGMA: &str = "PRAGMA journal_mode=MEMORY;
                              PRAGMA temp_store = memory;
                              PRAGMA recursive_triggers = ON;
                              PRAGMA synchronous = OFF;
-                             PRAGMA max_page_count = 4294967292;";
+                             PRAGMA max_page_count = 4294967292;
+                             PRAGMA locking_mode=EXCLUSIVE;";
 const TRANSACTION_SIZE: usize = 10000;
 
 pub struct Sqlite {
@@ -69,10 +70,11 @@ impl Sqlite {
 impl Storage for Sqlite {
     fn insert_comment(&mut self, comment: &Comment) -> Result<usize> {
         {
-            let mut statement = self.connection.prepare_cached("INSERT OR IGNORE INTO comment (reddit_id, author, subreddit, body, score, ups, downs, created_utc, retrieved_on, parent_id, parent_is_post) \
-                                                                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").unwrap();
+            let mut statement = self.connection.prepare_cached("INSERT OR IGNORE INTO comment (reddit_id, permalink, author, subreddit, body, score, ups, downs, created_utc, retrieved_on, parent_id, parent_is_post) \
+                                                                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").unwrap();
             statement.execute(params![
                 comment.id.as_str(),
+                comment.permalink.as_deref(),
                 comment.author.as_str(),
                 comment.subreddit.as_str(),
                 comment.body.as_str(),

@@ -34,7 +34,6 @@ mod storage;
 mod submission;
 
 
-
 fn main() {
     SimpleLogger::new().init().unwrap();
     let matches = App::new("pushshift-importer")

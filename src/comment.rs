@@ -22,6 +22,7 @@ pub struct Comment {
     pub retrieved_on: Option<i64>,
     pub link_id: String,
     pub id: String,
+    pub permalink: Option<String>,
     pub parent_id: String,
     #[serde(default)]
     pub parent_is_post: bool,
