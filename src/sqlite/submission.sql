@@ -15,6 +15,6 @@ CREATE TABLE IF NOT EXISTS submission (id INTEGER PRIMARY KEY,
                                        retrieved_on INTEGER,
                                        is_self BOOLEAN NOT NULL,
                                        over_18 BOOLEAN NOT NULL,
-                                       spoiler BOOL,
-                                       stickied BOOL NOT NULL,
+                                       spoiler BOOLEAN,
+                                       stickied BOOLEAN NOT NULL,
                                        num_crossposts INTEGER);

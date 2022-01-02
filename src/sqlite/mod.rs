@@ -16,6 +16,7 @@ const PRAGMA: &str = "PRAGMA journal_mode=WAL;
                       PRAGMA max_page_count = 4294967292;";
 
 const UNSAFE_PRAGMA: &str = "PRAGMA journal_mode=MEMORY;
+                             PRAGMA cache_size=-40000;
                              PRAGMA temp_store = memory;
                              PRAGMA recursive_triggers = ON;
                              PRAGMA synchronous = OFF;

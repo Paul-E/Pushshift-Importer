@@ -1,4 +1,4 @@
-CREATE VIRTUAL TABLE IF NOT EXISTS comment_fts USING fts5(author, subreddit, body, content = 'comment', content_rowid = 'id');
+CREATE VIRTUAL TABLE IF NOT EXISTS comment_fts USING fts5(author UNINDEXED, subreddit UNINDEXED, body, content = 'comment', content_rowid = 'id');
 
 CREATE TRIGGER IF NOT EXISTS comment_ai AFTER INSERT ON comment
     BEGIN
