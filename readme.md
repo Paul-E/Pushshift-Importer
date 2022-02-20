@@ -55,7 +55,6 @@ The user and subreddit filters are ORed against each other. If the content match
 
 ## Your database
 Once the importer has run and succesfully completed you can run `sqlite3 out.db` to open that db with sqlite.
-Running `SELECT * FROM comment_fts WHERE body MATCH 'snoo';` in sqlite will return all comments that have the word "snoo" in it.
 Enter `.schema` into the sqlite3 command line to see the table format.
 
 ## Sqlite schema:
@@ -76,6 +75,8 @@ The comment table is defined as
              retrieved_on INTEGER,
              parent_id TEXT NOT NULL,
              parent_is_post BOOLEAN NOT NULL);
+
+#### FTS (if enabled)
 
 The [FTS5](https://www.sqlite.org/fts5.html) table for comments is defined as
 
@@ -107,6 +108,8 @@ The submission table has the following schema
                                            spoiler BOOL,
                                            stickied BOOL,
                                            num_crossposts INTEGER);
+
+#### FTS (if enabled)
 
 With the FTS schema being defined by:
 

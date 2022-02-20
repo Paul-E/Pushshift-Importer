@@ -109,11 +109,11 @@ fn main() {
             .required(false)
             .takes_value(false)
             .help("Store some database structures in memory, improving performance at the const of durability. Errors will cause database corruption. This flag is used for testing."))
-        .arg(Arg::with_name("disable-fts")
-            .long("disable-fts")
+        .arg(Arg::with_name("enable-fts")
+            .long("enable-fts")
             .required(false)
             .takes_value(false)
-            .help("Disable full text search features. Disabling FTS creates a smaller database and may run faster."))
+            .help("Enable full text search features. Creates a larger database and takes longer to run."))
         .about("Import data from pushshift dump into a Sqlite database. Currently limited to comment data only.\
         Multiple filters can be applied, and if any of the filter criteria match, the comment is included. If no filters are supplied, all comments match; ie the whole dataset will be added to the sqlite file.")
         .get_matches();
@@ -121,7 +121,7 @@ fn main() {
     let mut sqlite = Sqlite::new(
         sqlite_filename,
         matches.is_present("unsafe-mode"),
-        !matches.is_present("disable-fts"),
+        matches.is_present("enable-fts"),
     )
     .expect("Error setting up sqlite DB");
     let filter: Arc<Filter> = Arc::new(Filter::from_args(&matches));
