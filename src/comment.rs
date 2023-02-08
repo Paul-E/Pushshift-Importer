@@ -40,7 +40,7 @@ pub struct Comment {
 impl FromJsonString for Comment {
     fn from_json_str(line: &str) -> Result<Self> {
         let mut json: serde_json::Value = serde_json::from_str(line)
-            .with_context(|| format!("Failed to read json for line: {}", line))?;
+            .with_context(|| format!("Failed to read json for line: {line}"))?;
         if let Some(created) = json.get_mut("created_utc") {
             if let serde_json::Value::String(utc_string) = created {
                 let utc: u64 = utc_string.parse()?;
@@ -53,7 +53,7 @@ impl FromJsonString for Comment {
             }
         }
         let mut comment = Comment::deserialize(json)
-            .with_context(|| format!("Failed to deserialize line: {}", line))?;
+            .with_context(|| format!("Failed to deserialize line: {line}"))?;
 
         if comment.parent_id.starts_with("t3_") {
             comment.parent_is_post = true;

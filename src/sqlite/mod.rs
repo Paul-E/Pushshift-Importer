@@ -123,7 +123,7 @@ impl Storage for Sqlite {
             ];
             statement
                 .execute(params)
-                .with_context(|| format!("Failed to insert: {:#?}", submission))?;
+                .with_context(|| format!("Failed to insert: {submission:#?}"))?;
         }
         self.in_transaction += 1;
 

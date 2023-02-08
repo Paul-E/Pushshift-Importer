@@ -37,7 +37,7 @@ pub struct Submission {
 impl FromJsonString for Submission {
     fn from_json_str(line: &str) -> Result<Self> {
         serde_json::from_str(line.trim_matches(char::from(0)))
-            .with_context(|| format!("Failed to deserialize line: {}", line))
+            .with_context(|| format!("Failed to deserialize line: {line}"))
     }
 }
 
@@ -70,10 +70,10 @@ where
     match json {
         serde_json::Value::Number(val) => val
             .as_i64()
-            .ok_or_else(|| serde::de::Error::custom(format!("invalid timestamp value {}", val))),
+            .ok_or_else(|| serde::de::Error::custom(format!("invalid timestamp value {val}"))),
         serde_json::Value::String(val) => {
             let ret: i64 = val.parse().map_err(|_| {
-                serde::de::Error::custom(format!("unable to parse timestamp: {}", val))
+                serde::de::Error::custom(format!("unable to parse timestamp: {val}"))
             })?;
             Ok(ret)
         }
