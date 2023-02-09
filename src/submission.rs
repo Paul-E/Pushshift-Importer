@@ -8,12 +8,12 @@ use serde::{Deserialize, Deserializer};
 #[derive(Deserialize, Debug, Clone)]
 pub struct Submission {
     pub author: Option<String>,
-    pub url: String,
+    pub url: Option<String>,
     pub permalink: String,
     pub score: Option<i32>,
     pub title: String,
     pub selftext: String,
-    pub domain: String,
+    pub domain: Option<String>,
     pub author_flair_text: Option<String>,
     pub subreddit: Option<String>,
     pub subreddit_id: Option<String>,
