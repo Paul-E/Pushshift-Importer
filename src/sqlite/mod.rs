@@ -73,7 +73,7 @@ impl Storage for Sqlite {
         {
             let mut statement = self.connection.prepare_cached("INSERT INTO comment (reddit_id, permalink, author, subreddit, body, score, ups, downs, created_utc, retrieved_on, parent_id, parent_is_post) \
                                                                                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\
-                                                                                 ON CONFLICT DO NOTHING").unwrap();
+                                                                                 ON CONFLICT DO NOTHING").expect("cached comment statement");
             statement.execute(params![
                 comment.id.as_str(),
                 comment.permalink.as_deref(),
@@ -100,7 +100,7 @@ impl Storage for Sqlite {
                                                                                 domain, url, score, ups, downs, created_utc, retrieved_on, is_self, over_18,\
                                                                                 spoiler, stickied, num_crossposts) \
                                                                                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \
-                                                                                ON CONFLICT DO NOTHING").unwrap();
+                                                                                ON CONFLICT DO NOTHING").expect("insert submission cached statement");
             let params = params![
                 submission.id.as_str(),
                 submission.author.as_deref(),

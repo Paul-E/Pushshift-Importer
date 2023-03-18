@@ -170,6 +170,7 @@ where
                 count += 1;
             }
             Err(mpsc::TryRecvError::Disconnected) => {
+                warn!("mpsc::TryRecvError::Disconnected error in process loop");
                 maybe_content.unwrap();
             }
             Err(mpsc::TryRecvError::Empty) => {
@@ -185,14 +186,13 @@ where
     info!("Processed {} items", count);
 
     for thread in threads {
-        thread.join().unwrap();
+        thread.join().expect("threads to join");
     }
 }
 
 fn get_file_list(dir: &Path) -> Vec<PathBuf> {
     fs::read_dir(dir)
-        .unwrap()
-        .into_iter()
+        .expect("file list")
         .filter_map(|dir_entry| dir_entry.ok().map(|ent| ent.path()))
         .collect()
 }
@@ -220,7 +220,7 @@ impl<T: FromJsonString + Filterable> ThreadContext<T> {
     }
 
     fn get_next_file(&self) -> Option<PathBuf> {
-        let mut queue = self.queue.write().unwrap();
+        let mut queue = self.queue.write().expect("queue lock");
         queue.pop()
     }
 
@@ -246,7 +246,9 @@ impl<T: FromJsonString + Filterable> ThreadContext<T> {
                 })
                 .filter(|content| self.filter.filter(content));
             for content in item_iterator {
-                self.send_channel.send(content).unwrap();
+                self.send_channel
+                    .send(content)
+                    .unwrap_or_else(|_| panic!("failed to parse line from {}", filename.display()));
             }
         }
         self.completed.fetch_add(1, Ordering::Relaxed);
