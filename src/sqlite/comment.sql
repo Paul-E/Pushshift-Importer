@@ -11,4 +11,6 @@ CREATE TABLE IF NOT EXISTS comment (id INTEGER PRIMARY KEY,
                                     created_utc INTEGER NOT NULL,
                                     retrieved_on INTEGER,
                                     parent_id TEXT NOT NULL,
-                                    parent_is_post BOOLEAN NOT NULL);
+                                    parent_is_post BOOLEAN NOT NULL,
+                                    stickied BOOLEAN NOT NULL DEFAULT FALSE,
+                                    distinguished TEXT);

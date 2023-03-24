@@ -28,9 +28,11 @@ pub struct Comment {
     #[serde(default)]
     pub parent_is_post: bool,
     #[serde(default)]
-    stickied: bool,
+    pub stickied: bool,
     #[serde(default)]
-    distinguished: Option<String>,
+    is_submitter: bool,
+    #[serde(default)]
+    pub distinguished: Option<String>,
     //    edited: Option<Edited>,
     #[serde(default)]
     archived: bool,
