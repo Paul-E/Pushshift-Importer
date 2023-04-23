@@ -1,6 +1,5 @@
 -- https://kimsereylam.com/sqlite/2020/03/06/full-text-search-with-sqlite.html
-CREATE TABLE IF NOT EXISTS comment (id INTEGER PRIMARY KEY,
-                                    reddit_id TEXT UNIQUE NOT NULL,
+CREATE TABLE IF NOT EXISTS comment (reddit_id TEXT UNIQUE NOT NULL,
                                     permalink TEXT,
                                     author TEXT,
                                     subreddit TEXT,
@@ -10,7 +9,7 @@ CREATE TABLE IF NOT EXISTS comment (id INTEGER PRIMARY KEY,
                                     downs INTEGER,
                                     created_utc INTEGER NOT NULL,
                                     retrieved_on INTEGER,
+                                    parent_type INTEGER NOT NULL,
                                     parent_id TEXT NOT NULL,
-                                    parent_is_post BOOLEAN NOT NULL,
                                     stickied BOOLEAN NOT NULL DEFAULT FALSE,
                                     distinguished TEXT);

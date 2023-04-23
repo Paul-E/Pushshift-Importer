@@ -1,5 +1,4 @@
-CREATE TABLE IF NOT EXISTS submission (id INTEGER PRIMARY KEY,
-                                       reddit_id TEXT UNIQUE NOT NULL,
+CREATE TABLE IF NOT EXISTS submission (reddit_id TEXT UNIQUE NOT NULL,
                                        author TEXT,
                                        title TEXT NOT NULL,
                                        author_flair_text TEXT,

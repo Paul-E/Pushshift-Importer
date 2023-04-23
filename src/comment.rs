@@ -3,7 +3,7 @@ use crate::{
     Filterable, FromJsonString,
 };
 use anyhow::{Context, Result};
-use serde::Deserialize;
+use serde::{de, Deserialize, Deserializer};
 
 #[allow(dead_code)]
 #[derive(Deserialize, Debug, Clone)]
@@ -24,7 +24,7 @@ pub struct Comment {
     pub link_id: String,
     pub id: String,
     pub permalink: Option<String>,
-    pub parent_id: String,
+    pub parent_id: ParentId,
     #[serde(default)]
     pub parent_is_post: bool,
     #[serde(default)]
@@ -37,6 +37,34 @@ pub struct Comment {
     #[serde(default)]
     archived: bool,
     controversiality: Option<i32>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ParentId {
+    pub parent_type: u8,
+    pub parent_id: String,
+}
+
+impl<'de> Deserialize<'de> for ParentId {
+    fn deserialize<D>(deserializer: D) -> Result<ParentId, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let parent: String = Deserialize::deserialize(deserializer)?;
+        let make_err =
+            || de::Error::invalid_value(de::Unexpected::Str(&parent), &"a valid parent id");
+        let (ty, parent_id) = parent.split_once('_').ok_or_else(make_err)?;
+        let type_char = ty.chars().nth(1).ok_or_else(make_err)?;
+        let parent_type: u8 = type_char
+            .to_digit(10)
+            .ok_or_else(make_err)?
+            .try_into()
+            .map_err(|_| make_err())?;
+        Ok(ParentId {
+            parent_type,
+            parent_id: parent_id.into(),
+        })
+    }
 }
 
 impl FromJsonString for Comment {
@@ -54,13 +82,9 @@ impl FromJsonString for Comment {
                 *score = 0.into()
             }
         }
-        let mut comment = Comment::deserialize(json)
+        let comment = Comment::deserialize(json)
             .with_context(|| format!("Failed to deserialize line: {line}"))?;
 
-        if comment.parent_id.starts_with("t3_") {
-            comment.parent_is_post = true;
-        }
-        comment.parent_id = comment.parent_id.split_off(2);
         Ok(comment)
     }
 }

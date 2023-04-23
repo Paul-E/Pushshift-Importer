@@ -71,7 +71,7 @@ impl Sqlite {
 impl Storage for Sqlite {
     fn insert_comment(&mut self, comment: &Comment) -> Result<usize> {
         {
-            let mut statement = self.connection.prepare_cached("INSERT INTO comment (reddit_id, permalink, author, subreddit, body, score, ups, downs, created_utc, retrieved_on, parent_id, parent_is_post, stickied, distinguished) \
+            let mut statement = self.connection.prepare_cached("INSERT INTO comment (reddit_id, permalink, author, subreddit, body, score, ups, downs, created_utc, retrieved_on, parent_type, parent_id, stickied, distinguished) \
                                                                                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\
                                                                                  ON CONFLICT DO NOTHING").expect("cached comment statement");
             statement.execute(params![
@@ -85,8 +85,8 @@ impl Storage for Sqlite {
                 comment.downs,
                 comment.created_utc,
                 comment.retrieved_on,
-                comment.parent_id.as_str(),
-                comment.parent_is_post,
+                comment.parent_id.parent_type,
+                comment.parent_id.parent_id.as_str(),
                 comment.stickied,
                 comment.distinguished.as_deref()
             ])?;
