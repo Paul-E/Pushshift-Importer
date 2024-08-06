@@ -6,6 +6,7 @@ use crate::{
 use anyhow::Result;
 use serde::Deserialize;
 
+#[allow(dead_code)]
 #[derive(Deserialize, Debug, Clone)]
 pub struct Submission {
     pub author: Option<String>,
@@ -17,9 +18,9 @@ pub struct Submission {
     pub domain: Option<String>,
     pub author_flair_text: Option<String>,
     pub subreddit: Option<String>,
-    pub _subreddit_id: Option<String>,
+    pub subreddit_id: Option<String>,
     pub id: String,
-    pub _num_comments: i32,
+    pub num_comments: i32,
     pub over_18: bool,
     pub is_self: bool,
     pub link_flair_text: Option<String>,
@@ -53,5 +54,17 @@ impl Filterable for Submission {
 impl Storable for Submission {
     fn store<T: Storage>(&self, storage: &mut T) -> Result<usize> {
         storage.insert_submission(self)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_deserialize() {
+        let submissions = include_str!("../test_data/test_submissions.json");
+        for line in submissions.lines() {
+            let _comment: Submission = serde_json::from_str(line).expect("deserialization");
+        }
     }
 }

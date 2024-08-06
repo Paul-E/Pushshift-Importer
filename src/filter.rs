@@ -133,14 +133,14 @@ mod tests {
 
     #[derive(Debug, Clone, Default)]
     struct ContentMock {
-        pub score: Option<i32>,
+        pub score: Option<i64>,
         pub author: Option<String>,
         pub subreddit: Option<String>,
         pub created: i64,
     }
 
     impl Filterable for ContentMock {
-        fn score(&self) -> Option<i32> {
+        fn score(&self) -> Option<i64> {
             self.score
         }
         fn author(&self) -> Option<&str> {

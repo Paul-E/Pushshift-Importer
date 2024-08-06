@@ -90,3 +90,15 @@ impl Storable for Comment {
         storage.insert_comment(self)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_deserialize() {
+        let comments = include_str!("../test_data/test_comments.json");
+        for line in comments.lines() {
+            let _comment: Comment = serde_json::from_str(line).expect("deserialization");
+        }
+    }
+}
