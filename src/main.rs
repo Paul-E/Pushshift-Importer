@@ -23,6 +23,7 @@ use simple_logger::SimpleLogger;
 use crate::{
     comment::Comment,
     filter::{date_format_validator, Filter, Filterable},
+    serde::Deserialize,
     sqlite::Sqlite,
     storage::{Storable, Storage},
     submission::Submission,
@@ -30,6 +31,7 @@ use crate::{
 
 mod comment;
 mod decompress;
+mod deser;
 mod filter;
 mod sqlite;
 mod storage;
@@ -140,7 +142,7 @@ fn main() {
 fn process<T, U>(file_list: Vec<PathBuf>, filter: Arc<Filter>, db: &mut T)
 where
     T: Storage,
-    U: Storable + FromJsonString + Filterable + Send + 'static,
+    U: Storable + Filterable + for<'a> Deserialize<'a> + Send + 'static,
 {
     let shared_file_list = Arc::new(RwLock::new(file_list));
     let completed = Arc::new(AtomicUsize::new(0));
@@ -204,7 +206,10 @@ struct ThreadContext<T> {
     send_channel: mpsc::SyncSender<T>,
 }
 
-impl<T: FromJsonString + Filterable> ThreadContext<T> {
+impl<T> ThreadContext<T>
+where
+    T: for<'a> Deserialize<'a> + Filterable,
+{
     fn new(
         filter: Arc<Filter>,
         queue: Arc<RwLock<Vec<PathBuf>>>,
@@ -235,7 +240,7 @@ impl<T: FromJsonString + Filterable> ThreadContext<T> {
             };
 
             let item_iterator = lines
-                .map(|line| T::from_json_str(line.as_str()))
+                .map(|line| serde_json::from_str(line.as_str()))
                 .filter_map(|maybe_content| {
                     maybe_content
                         .map_err(|err| {
@@ -253,11 +258,4 @@ impl<T: FromJsonString + Filterable> ThreadContext<T> {
         }
         self.completed.fetch_add(1, Ordering::Relaxed);
     }
-}
-
-// TODO: Use a standard deserialize trait
-trait FromJsonString {
-    fn from_json_str(line: &str) -> Result<Self>
-    where
-        Self: Sized;
 }

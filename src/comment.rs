@@ -1,8 +1,9 @@
 use crate::{
+    deser::{deserialize_score, deserialize_time},
     storage::{Storable, Storage},
-    Filterable, FromJsonString,
+    Filterable,
 };
-use anyhow::{Context, Result};
+use anyhow::Result;
 use serde::{de, Deserialize, Deserializer};
 
 #[allow(dead_code)]
@@ -15,9 +16,11 @@ pub struct Comment {
     pub author_flair_text: Option<String>,
     #[serde(default)]
     author_flair_css_class: Option<String>,
-    pub score: Option<i32>,
+    #[serde(deserialize_with = "deserialize_score")]
+    pub score: Option<i64>,
     pub ups: Option<i32>,
     pub downs: Option<i32>,
+    #[serde(deserialize_with = "deserialize_time")]
     pub created_utc: i64,
     #[serde(default)]
     pub retrieved_on: Option<i64>,
@@ -67,30 +70,8 @@ impl<'de> Deserialize<'de> for ParentId {
     }
 }
 
-impl FromJsonString for Comment {
-    fn from_json_str(line: &str) -> Result<Self> {
-        let mut json: serde_json::Value = serde_json::from_str(line)
-            .with_context(|| format!("Failed to read json for line: {line}"))?;
-        if let Some(created) = json.get_mut("created_utc") {
-            if let serde_json::Value::String(utc_string) = created {
-                let utc: u64 = utc_string.parse()?;
-                *created = utc.into();
-            }
-        }
-        if let Some(score) = json.get_mut("score") {
-            if matches!(score, serde_json::Value::Null) {
-                *score = 0.into()
-            }
-        }
-        let comment = Comment::deserialize(json)
-            .with_context(|| format!("Failed to deserialize line: {line}"))?;
-
-        Ok(comment)
-    }
-}
-
 impl Filterable for Comment {
-    fn score(&self) -> Option<i32> {
+    fn score(&self) -> Option<i64> {
         self.score
     }
     fn author(&self) -> Option<&str> {

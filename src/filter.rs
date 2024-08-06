@@ -6,7 +6,7 @@ use log::warn;
 const DATE_FORMAT: &str = "%Y-%m-%d-%H:%M:%S";
 
 pub trait Filterable {
-    fn score(&self) -> Option<i32>;
+    fn score(&self) -> Option<i64>;
     fn author(&self) -> Option<&str>;
     fn subreddit(&self) -> Option<&str>;
     fn created(&self) -> i64;
@@ -16,8 +16,8 @@ pub trait Filterable {
 pub struct Filter {
     users: HashSet<String>,
     subreddits: HashSet<String>,
-    min_score: Option<i32>,
-    max_score: Option<i32>,
+    min_score: Option<i64>,
+    max_score: Option<i64>,
     min_date: Option<i64>,
     max_date: Option<i64>,
 }
