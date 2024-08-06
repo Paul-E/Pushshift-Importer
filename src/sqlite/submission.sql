@@ -16,5 +16,6 @@ CREATE TABLE IF NOT EXISTS submission (reddit_id TEXT UNIQUE NOT NULL,
                                        is_self BOOLEAN NOT NULL,
                                        over_18 BOOLEAN NOT NULL,
                                        spoiler BOOLEAN,
+                                       pinned BOOLEAN,
                                        stickied BOOLEAN NOT NULL,
                                        num_crossposts INTEGER);

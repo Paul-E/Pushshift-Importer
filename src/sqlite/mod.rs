@@ -100,8 +100,8 @@ impl Storage for Sqlite {
         {
             let mut statement = self.connection.prepare_cached("INSERT INTO submission (reddit_id, author, title, subreddit, selftext, permalink,\
                                                                                 domain, url, score, ups, downs, created_utc, retrieved_on, is_self, over_18,\
-                                                                                spoiler, stickied, num_crossposts, author_flair_text, link_flair_text) \
-                                                                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \
+                                                                                spoiler, pinned, stickied, num_crossposts, author_flair_text, link_flair_text) \
+                                                                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \
                                                                                 ON CONFLICT DO NOTHING").expect("insert submission cached statement");
             let params = params![
                 submission.id.as_str(),
@@ -120,6 +120,7 @@ impl Storage for Sqlite {
                 submission.is_self,
                 submission.over_18,
                 submission.spoiler,
+                submission.pinned,
                 submission.stickied,
                 submission.num_crossposts,
                 submission.author_flair_text,

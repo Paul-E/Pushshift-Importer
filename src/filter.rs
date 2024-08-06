@@ -70,11 +70,11 @@ impl Filter {
         let users: HashSet<String> = matches
             .values_of("username")
             .map(|users| users.map(|user| user.to_string()).collect())
-            .unwrap_or_else(HashSet::new);
+            .unwrap_or_default();
         let subreddits: HashSet<String> = matches
             .values_of("subreddit")
             .map(|users| users.map(|user| user.to_string()).collect())
-            .unwrap_or_else(HashSet::new);
+            .unwrap_or_default();
         let min_score = matches
             .value_of("min-score")
             .map(|min_score| min_score.parse().expect("expected integer for min-score"));
@@ -90,11 +90,13 @@ impl Filter {
         let min_date = matches.value_of("min-datetime").map(|min_date| {
             NaiveDateTime::parse_from_str(min_date, DATE_FORMAT)
                 .expect("expected valid date")
+                .and_utc()
                 .timestamp()
         });
         let max_date = matches.value_of("max-datetime").map(|max_date| {
             NaiveDateTime::parse_from_str(max_date, DATE_FORMAT)
                 .expect("expected valid date")
+                .and_utc()
                 .timestamp()
         });
 
