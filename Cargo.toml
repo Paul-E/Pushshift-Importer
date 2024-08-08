@@ -18,9 +18,10 @@ xz2 = "0.1"
 zstd = "0.12"
 anyhow = "1.0"
 num_cpus = "1.0"
-log = { version = "0.4" }
-simple_logger = "1.11"
+log = { version = "0.4", features = ["kv", "kv_std"] }
 chrono = "0.4"
+fallible-streaming-iterator = "0.1.9"
+structured-logger = "1.0.3"
 
 [dependencies.rusqlite]
 version = "0.32"

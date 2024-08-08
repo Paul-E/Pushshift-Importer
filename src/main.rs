@@ -17,8 +17,9 @@ use std::{
 
 use anyhow::Result;
 use clap::{App, Arg};
+use fallible_streaming_iterator::FallibleStreamingIterator;
 use log::{error, info, warn};
-use simple_logger::SimpleLogger;
+use structured_logger::{json::new_writer, Builder as LoggerBuilder};
 
 use crate::{
     comment::Comment,
@@ -38,7 +39,10 @@ mod storage;
 mod submission;
 
 fn main() {
-    SimpleLogger::new().init().unwrap();
+    LoggerBuilder::with_level("info")
+        .with_target_writer("*", new_writer(std::io::stdout()))
+        .init();
+
     let matches = App::new("pushshift-importer")
         .version("0.1")
         .author("Paul Ellenbogen")
@@ -231,29 +235,38 @@ where
 
     fn process_queue(&self) {
         while let Some(filename) = self.get_next_file() {
-            let lines = match decompress::iter_lines(filename.as_path()) {
+            let mut lines = match decompress::stream_lines(filename.as_path()) {
                 Ok(l) => l,
-                Err(e) => {
-                    warn!("Error encountered in input file: {:#}. Skipping file", e);
+                Err(err) => {
+                    warn!(err:?, filename:% = filename.display(); "Error encountered in input file. Skipping file");
                     continue;
                 }
             };
 
-            let item_iterator = lines
-                .map(|line| serde_json::from_str(line.as_str()))
-                .filter_map(|maybe_content| {
-                    maybe_content
-                        .map_err(|err| {
-                            error!("Error parsing content: {:#?}", err);
-                            err
-                        })
-                        .ok()
-                })
-                .filter(|content| self.filter.filter(content));
-            for content in item_iterator {
-                self.send_channel
-                    .send(content)
-                    .unwrap_or_else(|_| panic!("failed to parse line from {}", filename.display()));
+            loop {
+                let maybe_line = lines.next();
+                let line = match maybe_line {
+                    Ok(Some(line)) => line,
+                    Ok(None) => break,
+                    Err(err) => {
+                        error!(err:?, filename:% = filename.display(); "Error reading content");
+                        continue;
+                    }
+                };
+                // Remove leading and trailing non-json chars
+                let line = line.trim_matches(|ch| !(ch == '{' || ch == '}'));
+                let content = match serde_json::from_str::<T>(line) {
+                    Ok(data) => data,
+                    Err(err) => {
+                        error!(err:?, filename:% = filename.display(), json = line; "Error deserializing content");
+                        continue;
+                    }
+                };
+                if self.filter.filter(&content) {
+                    self.send_channel.send(content).unwrap_or_else(|_| {
+                        panic!("failed to parse line from {}", filename.display())
+                    });
+                }
             }
         }
         self.completed.fetch_add(1, Ordering::Relaxed);

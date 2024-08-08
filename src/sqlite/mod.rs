@@ -85,8 +85,14 @@ impl Storage for Sqlite {
                 comment.downs,
                 comment.created_utc,
                 comment.retrieved_on,
-                comment.parent_id.parent_type,
-                comment.parent_id.parent_id.as_str(),
+                comment
+                    .parent_id
+                    .as_ref()
+                    .and_then(|parent| parent.parent_type),
+                comment
+                    .parent_id
+                    .as_ref()
+                    .map(|parent| parent.parent_id.as_str()),
                 comment.stickied,
                 comment.distinguished.as_deref()
             ])?;
