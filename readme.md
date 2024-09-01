@@ -1,10 +1,10 @@
 # Pushshift data importer for reddit data
 
-This tool takes Pushshift [data dumps](https://files.pushshift.io/reddit/) and creates a Sqlite database. Running this tool against the comments archive will create a sqlite file that enables full text search using the [FTS5](https://www.sqlite.org/fts5.html) extension of Sqlite.
+This tool takes Pushshift [data dumps](https://github.com/ArthurHeitmann/arctic_shift/blob/master/download_links.md) and creates a Sqlite database. Running this tool against the comments archive will create a sqlite file that enables full text search using the [FTS5](https://www.sqlite.org/fts5.html) extension of Sqlite.
 
 ## Requirements
  * [Rust compiler](https://www.rust-lang.org/tools/install)
- * Data from Pushshift [data dumps](https://files.pushshift.io/reddit/) (or files in a compatible JSON format)
+ * Data from Pushshift [data dumps](https://github.com/ArthurHeitmann/arctic_shift/blob/master/download_links.md) (or files in a compatible JSON format)
 
 ## Running the importer
 ### Quick start
