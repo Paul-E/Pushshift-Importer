@@ -1,6 +1,6 @@
-use crate::hashbrown::HashSet;
+use crate::Cli;
+use ahash::HashSet;
 use chrono::NaiveDateTime;
-use clap::ArgMatches;
 use log::warn;
 
 const DATE_FORMAT: &str = "%Y-%m-%d-%H:%M:%S";
@@ -66,34 +66,35 @@ impl Filter {
         false
     }
 
-    pub fn from_args(matches: &ArgMatches) -> Self {
-        let users: HashSet<String> = matches
-            .values_of("username")
-            .map(|users| users.map(|user| user.to_string()).collect())
+    pub fn from_cli(cli: &Cli) -> Self {
+        let users: HashSet<String> = cli
+            .username
+            .as_ref()
+            .map(|users| users.iter().cloned().collect())
             .unwrap_or_default();
-        let subreddits: HashSet<String> = matches
-            .values_of("subreddit")
-            .map(|users| users.map(|user| user.to_string()).collect())
+        let subreddits: HashSet<String> = cli
+            .subreddit
+            .as_ref()
+            .map(|subs| subs.iter().cloned().collect())
             .unwrap_or_default();
-        let min_score = matches
-            .value_of("min-score")
+        let min_score = cli
+            .min_score
+            .as_ref()
             .map(|min_score| min_score.parse().expect("expected integer for min-score"));
-        let max_score = matches
-            .value_of("max-score")
-            .map(|max_score| max_score.parse().expect("expected integer for max-score"));
+        let max_score = cli.max_score;
         match (min_score, max_score) {
             (Some(min), Some(max)) if max < min => {
                 warn!("max-score < min-score, only posts with no score will be stored")
             }
             _ => (),
         };
-        let min_date = matches.value_of("min-datetime").map(|min_date| {
+        let min_date = cli.min_datetime.as_ref().map(|min_date| {
             NaiveDateTime::parse_from_str(min_date, DATE_FORMAT)
                 .expect("expected valid date")
                 .and_utc()
                 .timestamp()
         });
-        let max_date = matches.value_of("max-datetime").map(|max_date| {
+        let max_date = cli.max_datetime.as_ref().map(|max_date| {
             NaiveDateTime::parse_from_str(max_date, DATE_FORMAT)
                 .expect("expected valid date")
                 .and_utc()
@@ -117,14 +118,13 @@ impl Filter {
     }
 }
 
-pub fn date_format_validator(date: String) -> Result<(), String> {
-    NaiveDateTime::parse_from_str(&date, DATE_FORMAT).map_err(|_err| {
+pub fn date_format_validator(date: &str) -> Result<String, String> {
+    NaiveDateTime::parse_from_str(date, DATE_FORMAT).map_err(|_err| {
         format!(
-            "unable to parse date {}, expected string in format {}. eg 2015-09-05-23:56:04",
-            &date, DATE_FORMAT
+            "unable to parse date {date}, expected string in format {DATE_FORMAT}. eg 2015-09-05-23:56:04"
         )
     })?;
-    Ok(())
+    Ok(date.to_string())
 }
 
 #[cfg(test)]

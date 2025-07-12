@@ -1,7 +1,7 @@
+extern crate ahash;
 extern crate chrono;
 extern crate clap;
 extern crate flate2;
-extern crate hashbrown;
 extern crate serde;
 extern crate serde_json;
 
@@ -16,7 +16,7 @@ use std::{
 };
 
 use anyhow::Result;
-use clap::{App, Arg};
+use clap::Parser;
 use fallible_streaming_iterator::FallibleStreamingIterator;
 use log::{error, info, warn};
 use structured_logger::{json::new_writer, Builder as LoggerBuilder};
@@ -38,106 +38,78 @@ mod sqlite;
 mod storage;
 mod submission;
 
+#[derive(Parser)]
+#[command(name = "pushshift-importer")]
+#[command(version = "0.1")]
+#[command(author = "Paul Ellenbogen")]
+#[command(
+    about = "Import data from pushshift dump into a Sqlite database. Currently limited to comment data only. Multiple filters can be applied, and if any of the filter criteria match, the comment is included. If no filters are supplied, all comments match; ie the whole dataset will be added to the sqlite file."
+)]
+struct Cli {
+    /// Path for for output Sqlite database.
+    sqlite_outfile: PathBuf,
+
+    /// Directory where compressed json files containing comments are located
+    #[arg(long)]
+    comments: Option<PathBuf>,
+
+    /// Directory where compressed json files containing submissions are located
+    #[arg(long)]
+    submissions: Option<PathBuf>,
+
+    /// File containing filter configuration
+    #[arg(long = "filter-config")]
+    filter_config: Option<String>,
+
+    /// Add a username to the username filter
+    #[arg(long, num_args = 1..)]
+    username: Option<Vec<String>>,
+
+    /// Add a subreddit to the subreddit filter
+    #[arg(long, num_args = 1..)]
+    subreddit: Option<Vec<String>>,
+
+    /// Only include content with this score or higher
+    #[arg(long = "min-score")]
+    min_score: Option<String>,
+
+    /// Only include content with this score or lower
+    #[arg(long = "max-score")]
+    max_score: Option<i64>,
+
+    /// Only include content created at or after this date
+    #[arg(long = "min-datetime", value_parser = date_format_validator)]
+    min_datetime: Option<String>,
+
+    /// Only include content created at or before this date
+    #[arg(long = "max-datetime", value_parser = date_format_validator)]
+    max_datetime: Option<String>,
+
+    /// Store some database structures in memory, improving performance at the const of durability. Errors will cause database corruption. This flag is used for testing.
+    #[arg(long = "unsafe-mode")]
+    unsafe_mode: bool,
+
+    /// Enable full text search features. Creates a larger database and takes longer to run.
+    #[arg(long = "enable-fts")]
+    enable_fts: bool,
+}
+
 fn main() {
     LoggerBuilder::with_level("info")
         .with_target_writer("*", new_writer(std::io::stdout()))
         .init();
 
-    let matches = App::new("pushshift-importer")
-        .version("0.1")
-        .author("Paul Ellenbogen")
-        .arg(
-            Arg::with_name("sqlite-outfile")
-                .required(true)
-                .help("Path for for output Sqlite database.")
-                .takes_value(true),
-        )
-        .arg(Arg::with_name("comments")
-            .long("comments")
-            .help("Directory where compressed json files containing comments are located")
-            .takes_value(true))
-        .arg(Arg::with_name("submissions")
-            .long("submissions")
-            .help("Directory where compressed json files containing submissions are located")
-            .takes_value(true))
-        .arg(Arg::with_name("filter-config")
-            .long("filter-config")
-            .help("File containing filter configuration")
-            .takes_value(true))
-        .arg(
-            Arg::with_name("username")
-                .long("username")
-                .required(false)
-                .multiple(true)
-                .takes_value(true)
-                .help("Add a username to the username filter"),
-        )
-        .arg(
-            Arg::with_name("subreddit")
-                .long("subreddit")
-                .required(false)
-                .multiple(true)
-                .takes_value(true)
-                .help("Add a subreddit to the subreddit filter"),
-        )
-        .arg(
-            Arg::with_name("min-score")
-                .long("min-score")
-                .required(false)
-                .takes_value(true)
-                .help("Only include content with this score or higher"),
-        )
-        .arg(
-            Arg::with_name("max-score")
-                .long("max-score")
-                .required(false)
-                .takes_value(true)
-                .help("Only include content with this score or lower"),
-        )
-        .arg(
-            Arg::with_name("min-datetime")
-                .long("min-datetime")
-                .required(false)
-                .takes_value(true)
-                .validator(date_format_validator)
-                .help("Only include content created at or after this date"),
-        )
-        .arg(
-            Arg::with_name("max-datetime")
-                .long("max-datetime")
-                .required(false)
-                .takes_value(true)
-                .validator(date_format_validator)
-                .help("Only include content created at or before this date"),
-        )
-        .arg(Arg::with_name("unsafe-mode")
-            .long("unsafe-mode")
-            .required(false)
-            .takes_value(false)
-            .help("Store some database structures in memory, improving performance at the const of durability. Errors will cause database corruption. This flag is used for testing."))
-        .arg(Arg::with_name("enable-fts")
-            .long("enable-fts")
-            .required(false)
-            .takes_value(false)
-            .help("Enable full text search features. Creates a larger database and takes longer to run."))
-        .about("Import data from pushshift dump into a Sqlite database. Currently limited to comment data only.\
-        Multiple filters can be applied, and if any of the filter criteria match, the comment is included. If no filters are supplied, all comments match; ie the whole dataset will be added to the sqlite file.")
-        .get_matches();
-    let sqlite_filename = Path::new(matches.value_of("sqlite-outfile").unwrap());
-    let mut sqlite = Sqlite::new(
-        sqlite_filename,
-        matches.is_present("unsafe-mode"),
-        matches.is_present("enable-fts"),
-    )
-    .expect("Error setting up sqlite DB");
-    let filter: Arc<Filter> = Arc::new(Filter::from_args(&matches));
-    if let Some(comments_dir) = matches.value_of("comments") {
-        let file_list = get_file_list(Path::new(comments_dir));
+    let cli = Cli::parse();
+    let mut sqlite = Sqlite::new(&cli.sqlite_outfile, cli.unsafe_mode, cli.enable_fts)
+        .expect("Error setting up sqlite DB");
+    let filter: Arc<Filter> = Arc::new(Filter::from_cli(&cli));
+    if let Some(comments_dir) = &cli.comments {
+        let file_list = get_file_list(comments_dir);
         info!("Processing comments");
         process::<_, Comment>(file_list, filter.clone(), &mut sqlite);
     }
-    if let Some(submissions_dir) = matches.value_of("submissions") {
-        let file_list = get_file_list(Path::new(submissions_dir));
+    if let Some(submissions_dir) = &cli.submissions {
+        let file_list = get_file_list(submissions_dir);
         info!("Processing submissions");
         process::<_, Submission>(file_list, filter, &mut sqlite);
     }
