@@ -9,8 +9,9 @@ use std::{
     fs,
     path::{Path, PathBuf},
     sync::{
+        Arc, RwLock,
         atomic::{AtomicUsize, Ordering},
-        mpsc, Arc, RwLock,
+        mpsc,
     },
     thread, time,
 };
@@ -19,11 +20,11 @@ use anyhow::Result;
 use clap::Parser;
 use fallible_streaming_iterator::FallibleStreamingIterator;
 use log::{error, info, warn};
-use structured_logger::{json::new_writer, Builder as LoggerBuilder};
+use structured_logger::{Builder as LoggerBuilder, json::new_writer};
 
 use crate::{
     comment::Comment,
-    filter::{date_format_validator, Filter, Filterable},
+    filter::{Filter, Filterable, date_format_validator},
     serde::Deserialize,
     sqlite::Sqlite,
     storage::{Storable, Storage},

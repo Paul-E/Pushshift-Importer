@@ -1,10 +1,10 @@
 use crate::{
+    Filterable,
     deser::{deserialize_score, deserialize_time},
     storage::{Storable, Storage},
-    Filterable,
 };
 use anyhow::Result;
-use serde::{de, Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, de};
 
 #[allow(dead_code)]
 #[derive(Deserialize, Debug, Clone)]

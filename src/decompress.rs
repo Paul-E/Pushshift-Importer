@@ -1,10 +1,10 @@
 use std::fs;
 use std::fs::File;
-use std::io::prelude::*;
 use std::io::BufReader;
+use std::io::prelude::*;
 use std::path::Path;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use bzip2::read::BzDecoder;
 use fallible_streaming_iterator::FallibleStreamingIterator;
 use flate2::read::GzDecoder;
@@ -15,7 +15,7 @@ const ZSTD_DECODE_WINDOW_LOG_MAX: u32 = 31;
 
 pub fn stream_lines(
     filename: &Path,
-) -> Result<impl FallibleStreamingIterator<Item = str, Error = std::io::Error>> {
+) -> Result<impl FallibleStreamingIterator<Item = str, Error = std::io::Error> + use<>> {
     let extension = filename
         .extension()
         .and_then(|extension| extension.to_str())

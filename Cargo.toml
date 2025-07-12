@@ -2,7 +2,7 @@
 name = "pushshift-importer"
 version = "0.1.0"
 authors = ["Paul Ellenbogen <PaulEllenbogen@gmail.com>"]
-edition = "2021"
+edition = "2024"
 
 [profile.release]
 debug = true
