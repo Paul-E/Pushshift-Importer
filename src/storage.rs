@@ -1,4 +1,4 @@
-use crate::{comment::Comment, submission::Submission};
+use crate::reddit_types::{comment::Comment, submission::Submission};
 use anyhow::Result;
 
 pub trait Storage: Sized {

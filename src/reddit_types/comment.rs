@@ -1,21 +1,35 @@
 use crate::{
     Filterable,
-    deser::{deserialize_score, deserialize_time},
+    deser::{deserialize_optional_time, deserialize_score, deserialize_time},
+    reddit_types::{ParentId, SubredditType},
     storage::{Storable, Storage},
 };
 use anyhow::Result;
-use serde::{Deserialize, Deserializer, de};
+use serde::Deserialize;
+use serde_with::{NoneAsEmptyString, serde_as};
+use strum::IntoStaticStr;
+use uuid::Uuid;
 
-#[allow(dead_code)]
+#[serde_as]
 #[derive(Deserialize, Debug, Clone)]
 pub struct Comment {
     pub author: String,
     pub body: String,
     pub subreddit: String,
+    pub subreddit_id: ParentId,
+    pub subreddit_type: Option<SubredditType>,
     #[serde(default)]
+    #[expect(dead_code)]
     pub author_flair_text: Option<String>,
+    #[expect(dead_code)]
     #[serde(default)]
-    author_flair_css_class: Option<String>,
+    #[serde_as(as = "NoneAsEmptyString")]
+    pub author_flair_template_id: Option<Uuid>,
+    #[serde(default)]
+    pub author_premium: Option<bool>,
+    #[serde(default)]
+    #[expect(dead_code)]
+    pub author_flair_css_class: Option<String>,
     #[serde(deserialize_with = "deserialize_score")]
     pub score: Option<i64>,
     pub ups: Option<i32>,
@@ -24,7 +38,8 @@ pub struct Comment {
     pub created_utc: i64,
     #[serde(default)]
     pub retrieved_on: Option<i64>,
-    pub link_id: String,
+    #[expect(dead_code)]
+    pub link_id: ParentId,
     pub id: String,
     pub permalink: Option<String>,
     #[serde(default)]
@@ -34,56 +49,28 @@ pub struct Comment {
     #[serde(default)]
     pub stickied: bool,
     #[serde(default)]
-    is_submitter: bool,
+    pub is_submitter: bool,
     #[serde(default)]
-    pub distinguished: Option<String>,
-    //    edited: Option<Edited>,
+    pub distinguished: Option<Distinguished>,
+    #[serde(deserialize_with = "deserialize_optional_time")]
+    pub edited: Option<i64>,
     #[serde(default)]
-    archived: bool,
-    controversiality: Option<i32>,
+    pub archived: bool,
+    #[expect(dead_code)]
+    pub controversiality: Option<i32>,
+    #[serde(default)]
+    pub locked: bool,
+    #[serde(default)]
+    pub collapsed: bool,
 }
 
-#[derive(Debug, Clone)]
-pub struct ParentId {
-    pub parent_type: Option<u8>,
-    pub parent_id: String,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(untagged)]
-enum IdStringOrInt {
-    String(String),
-    Int(i64),
-}
-
-impl<'de> Deserialize<'de> for ParentId {
-    fn deserialize<D>(deserializer: D) -> Result<ParentId, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let parent: IdStringOrInt = Deserialize::deserialize(deserializer)?;
-        Ok(match parent {
-            IdStringOrInt::Int(value) => ParentId {
-                parent_type: None,
-                parent_id: value.to_string(),
-            },
-            IdStringOrInt::String(parent) => {
-                let make_err =
-                    || de::Error::invalid_value(de::Unexpected::Str(&parent), &"a valid parent id");
-                let (ty, parent_id) = parent.split_once('_').ok_or_else(make_err)?;
-                let type_char = ty.chars().nth(1).ok_or_else(make_err)?;
-                let parent_type: u8 = type_char
-                    .to_digit(10)
-                    .ok_or_else(make_err)?
-                    .try_into()
-                    .map_err(|_| make_err())?;
-                ParentId {
-                    parent_type: Some(parent_type),
-                    parent_id: parent_id.into(),
-                }
-            }
-        })
-    }
+#[derive(Deserialize, Debug, Clone, Copy, IntoStaticStr)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub(crate) enum Distinguished {
+    Admin,
+    Moderator,
+    Special,
 }
 
 impl Filterable for Comment {
@@ -112,7 +99,7 @@ mod tests {
     use super::*;
     #[test]
     fn test_deserialize() {
-        let comments = include_str!("../test_data/test_comments.json");
+        let comments = include_str!("../../test_data/test_comments.json");
         for line in comments.lines() {
             let _comment: Comment = serde_json::from_str(line).expect("deserialization");
         }

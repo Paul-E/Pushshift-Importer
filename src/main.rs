@@ -23,21 +23,19 @@ use log::{error, info, warn};
 use structured_logger::{Builder as LoggerBuilder, json::new_writer};
 
 use crate::{
-    comment::Comment,
     filter::{Filter, Filterable, date_format_validator},
+    reddit_types::{comment::Comment, submission::Submission},
     serde::Deserialize,
     sqlite::Sqlite,
     storage::{Storable, Storage},
-    submission::Submission,
 };
 
-mod comment;
 mod decompress;
 mod deser;
 mod filter;
+pub(crate) mod reddit_types;
 mod sqlite;
 mod storage;
-mod submission;
 
 #[derive(Parser)]
 #[command(name = "pushshift-importer")]
