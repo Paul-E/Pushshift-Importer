@@ -6,6 +6,7 @@ edition = "2024"
 
 [profile.release]
 debug = true
+lto = "thin"
 
 [dependencies]
 jemallocator = "0.5"

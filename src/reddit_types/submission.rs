@@ -140,7 +140,7 @@ impl Filterable for Submission {
 }
 
 impl Storable for Submission {
-    fn store<T: Storage>(&self, storage: &mut T) -> Result<usize> {
+    fn store<T: Storage>(self, storage: &mut T) -> Result<usize> {
         storage.insert_submission(self)
     }
 }
