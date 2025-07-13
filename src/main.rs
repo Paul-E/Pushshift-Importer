@@ -5,6 +5,11 @@ extern crate flate2;
 extern crate serde;
 extern crate serde_json;
 
+use jemallocator::Jemalloc;
+
+#[global_allocator]
+static GLOBAL: Jemalloc = Jemalloc;
+
 use std::{
     fs,
     path::{Path, PathBuf},
