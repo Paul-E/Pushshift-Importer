@@ -15,6 +15,7 @@ pub(crate) enum SubredditType {
     GoldRestricted,
     GoldOnly,
     Private,
+    EmployeesOnly,
 }
 
 #[derive(Debug, Clone)]
