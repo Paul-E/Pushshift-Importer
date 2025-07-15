@@ -19,7 +19,8 @@ const SUBMISSIONS_FTS: &str = include_str!("submission_fts.sql");
 const PRAGMA: &str = "PRAGMA journal_mode=WAL;
                       PRAGMA recursive_triggers = ON;
                       PRAGMA synchronous = NORMAL;
-                      PRAGMA max_page_count = 4294967292;";
+                      PRAGMA max_page_count = 4294967292;
+                      PRAGMA page_size = 8192;";
 
 const UNSAFE_PRAGMA: &str = "PRAGMA journal_mode=MEMORY;
                              PRAGMA cache_size=-8000000;
@@ -27,6 +28,7 @@ const UNSAFE_PRAGMA: &str = "PRAGMA journal_mode=MEMORY;
                              PRAGMA recursive_triggers = ON;
                              PRAGMA synchronous = OFF;
                              PRAGMA max_page_count = 4294967292;
+                             PRAGMA page_size = 8192;
                              PRAGMA locking_mode=EXCLUSIVE;";
 const TRANSACTION_SIZE: usize = 10000;
 const BATCH_SIZE: usize = 50;

@@ -22,16 +22,16 @@ use std::{
 };
 
 use anyhow::Result;
-use clap::Parser;
+use clap::{CommandFactory, Parser, error::ErrorKind};
 use fallible_streaming_iterator::FallibleStreamingIterator;
 use log::{error, info, warn};
+use serde::Deserialize;
+use sqlite::Sqlite;
 use structured_logger::{Builder as LoggerBuilder, json::new_writer};
 
 use crate::{
     filter::{Filter, Filterable, date_format_validator},
     reddit_types::{comment::Comment, submission::Submission},
-    serde::Deserialize,
-    sqlite::Sqlite,
     storage::{Storable, Storage},
 };
 
@@ -104,6 +104,23 @@ fn main() {
         .init();
 
     let cli = Cli::parse();
+    let mut command = Cli::command();
+    if Some(false)
+        == cli
+            .comments
+            .as_ref()
+            .map(|comments_path| comments_path.exists() && comments_path.is_dir())
+    {
+        command.error(ErrorKind::ValueValidation, "comments must be a directory and exist").exit();
+    }
+    if Some(false)
+        == cli
+        .submissions
+        .as_ref()
+        .map(|submissions_path| submissions_path.exists() && submissions_path.is_dir())
+    {
+        command.error(ErrorKind::ValueValidation, "submission must be a directory and exist").exit();
+    }
     let mut sqlite = Sqlite::new(&cli.sqlite_outfile, cli.unsafe_mode, cli.enable_fts)
         .expect("Error setting up sqlite DB");
     let filter: Arc<Filter> = Arc::new(Filter::from_cli(&cli));
