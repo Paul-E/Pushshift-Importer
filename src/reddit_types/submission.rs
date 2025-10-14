@@ -6,7 +6,7 @@ use crate::{
 };
 use anyhow::Result;
 use serde::Deserialize;
-use serde_with::{NoneAsEmptyString, serde_as};
+use serde_with::{DefaultOnError, NoneAsEmptyString, serde_as};
 use strum::IntoStaticStr;
 use uuid::Uuid;
 
@@ -23,7 +23,7 @@ pub struct Submission {
     pub domain: Option<String>,
     pub author_flair_text: Option<String>,
     #[serde(default)]
-    #[serde_as(as = "NoneAsEmptyString")]
+    #[serde_as(as = "DefaultOnError<NoneAsEmptyString>")]
     pub author_flair_template_id: Option<Uuid>,
     pub subreddit: Option<String>,
     pub subreddit_id: Option<ParentId>,
@@ -32,7 +32,7 @@ pub struct Submission {
     pub over_18: bool,
     pub is_self: bool,
     #[serde(default)]
-    #[serde_as(as = "NoneAsEmptyString")]
+    #[serde_as(as = "DefaultOnError<NoneAsEmptyString>")]
     pub link_flair_template_id: Option<Uuid>,
     pub link_flair_text: Option<String>,
     pub spoiler: Option<bool>,

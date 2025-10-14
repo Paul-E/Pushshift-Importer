@@ -6,7 +6,7 @@ use crate::{
 };
 use anyhow::Result;
 use serde::Deserialize;
-use serde_with::{NoneAsEmptyString, serde_as};
+use serde_with::{DefaultOnError, NoneAsEmptyString, serde_as};
 use strum::IntoStaticStr;
 use uuid::Uuid;
 
@@ -23,7 +23,7 @@ pub struct Comment {
     pub author_flair_text: Option<String>,
     #[expect(dead_code)]
     #[serde(default)]
-    #[serde_as(as = "NoneAsEmptyString")]
+    #[serde_as(as = "DefaultOnError<NoneAsEmptyString>")]
     pub author_flair_template_id: Option<Uuid>,
     #[serde(default)]
     pub author_premium: Option<bool>,
