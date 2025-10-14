@@ -39,4 +39,5 @@ CREATE TABLE IF NOT EXISTS submission (decoded_reddit_id INTEGER PRIMARY KEY,
                                        quarantine BOOLEAN,
                                        num_comments INTEGER NOT NULL,
                                        contest_mode INTEGER NOT NULL,
-                                       num_crossposts INTEGER);
+                                       num_crossposts INTEGER,
+                                       locked BOOLEAN);

@@ -71,6 +71,7 @@ pub struct Submission {
     pub post_hint: Option<PostHint>,
     pub removed_by_category: Option<RemovedByCategory>,
     pub subreddit_type: Option<SubredditType>,
+    pub locked: Option<bool>,
 
     // Whitelist status stuff
     #[expect(dead_code)]

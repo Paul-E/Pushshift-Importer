@@ -188,14 +188,14 @@ impl Sqlite {
         }
 
         let batch_size = self.submission_buffer.len();
-        let values_clause = vec!["(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"; batch_size].join(", ");
+        let values_clause = vec!["(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"; batch_size].join(", ");
         let sql = format!(
             "INSERT INTO submission \
             (decoded_reddit_id, reddit_id, author, author_premium, title, subreddit, decoded_subreddit_id, subreddit_subscribers, selftext, permalink, \
              domain, url, score, ups, downs, created_utc, edited_utc, retrieved_on, is_self, over_18, \
              spoiler, pinned, stickied, num_comments, num_crossposts, author_flair_text, author_flair_template_id, link_flair_text, link_flair_template_id, \
              is_created_from_ads_ui, is_gallery, is_video, is_original_content, is_reddit_media_domain, contest_mode, quarantine, \
-             subreddit_type, suggested_sort, decoded_crosspost_parent_id, post_hint, removed_by_category) \
+             subreddit_type, suggested_sort, decoded_crosspost_parent_id, post_hint, removed_by_category, locked) \
             VALUES {values_clause} \
             ON CONFLICT DO NOTHING"
         );
@@ -278,6 +278,7 @@ impl Sqlite {
                             RefSqliteValue::Text(<&'static str>::from(cat).as_bytes())
                         }),
                 ),
+                submission.locked.to_sql()?,
             ];
             params.push(row_params);
         }

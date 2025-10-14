@@ -111,15 +111,25 @@ fn main() {
             .as_ref()
             .map(|comments_path| comments_path.exists() && comments_path.is_dir())
     {
-        command.error(ErrorKind::ValueValidation, "comments must be a directory and exist").exit();
+        command
+            .error(
+                ErrorKind::ValueValidation,
+                "comments must be a directory and exist",
+            )
+            .exit();
     }
     if Some(false)
         == cli
-        .submissions
-        .as_ref()
-        .map(|submissions_path| submissions_path.exists() && submissions_path.is_dir())
+            .submissions
+            .as_ref()
+            .map(|submissions_path| submissions_path.exists() && submissions_path.is_dir())
     {
-        command.error(ErrorKind::ValueValidation, "submission must be a directory and exist").exit();
+        command
+            .error(
+                ErrorKind::ValueValidation,
+                "submission must be a directory and exist",
+            )
+            .exit();
     }
     let mut sqlite = Sqlite::new(&cli.sqlite_outfile, cli.unsafe_mode, cli.enable_fts)
         .expect("Error setting up sqlite DB");
