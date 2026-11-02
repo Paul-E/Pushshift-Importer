@@ -121,7 +121,7 @@ impl Sqlite {
             let decoded_parent_id = comment
                 .parent_id
                 .as_ref()
-                .and_then(|parent_id| i64::from_str_radix(&parent_id.parent_id, 26).ok());
+                .and_then(|parent_id| i64::from_str_radix(&parent_id.parent_id, 36).ok());
 
             let row_params = [
                 ToSqlOutput::Owned(OwnedSqliteValue::from(decoded_reddit_id)),
